@@ -1,0 +1,121 @@
+version: "3.9"
+
+services:
+  # ── MongoDB ────────────────────────────────────────
+  mongo:
+    image: mongo:7
+    container_name: trendbriefai-mongo
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_DATABASE: trendbriefai
+    volumes:
+      - mongo-data:/data/db
+      - ./database:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - trendbriefai
+
+  # ── Redis ──────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: trendbriefai-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+    networks:
+      - trendbriefai
+
+  # ── AI Engine (Python / FastAPI) ─────────────────
+  trendbriefai-engine:
+    build:
+      context: ./trendbriefai-engine
+      dockerfile: Dockerfile
+    container_name: trendbriefai-engine
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      MONGODB_URI: mongodb://mongo:27017/trendbriefai
+      REDIS_URL: redis://redis:6379
+      OLLAMA_URL: http://host.docker.internal:11434
+    depends_on:
+      mongo:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 20s
+    networks:
+      - trendbriefai
+
+  # ── Backend (Express.js) ───────────────────────────
+  trendbriefai-service:
+    build:
+      context: ./trendbriefai-service
+      dockerfile: Dockerfile
+    container_name: trendbriefai-service
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      MONGODB_URI: mongodb://mongo:27017/trendbriefai
+      REDIS_URL: redis://redis:6379
+      AI_SERVICE_URL: http://trendbriefai-engine:8000
+      JWT_SECRET: dev-secret-change-me
+      NODE_ENV: development
+    depends_on:
+      mongo:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      trendbriefai-engine:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/health"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 15s
+    networks:
+      - trendbriefai
+
+  # ── Web UI (Angular) ───────────────────────────────
+  trendbriefai-ui:
+    build:
+      context: ./trendbriefai-ui
+      dockerfile: Dockerfile
+    container_name: trendbriefai-ui
+    restart: unless-stopped
+    ports:
+      - "4200:80"
+    environment:
+      API_URL: http://trendbriefai-service:3000/api
+    depends_on:
+      trendbriefai-service:
+        condition: service_healthy
+    networks:
+      - trendbriefai
+
+volumes:
+  mongo-data:
+
+networks:
+  trendbriefai:
+    driver: bridge

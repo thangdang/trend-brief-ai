@@ -1,0 +1,33 @@
+import { Component } from '@angular/core';
+import { RouterLink, RouterLinkActive } from '@angular/router';
+
+@Component({
+  selector: 'app-sidebar',
+  standalone: true,
+  imports: [RouterLink, RouterLinkActive],
+  template: `
+    <aside class="app-sidebar">
+      <div class="sidebar-brand">
+        <span class="brand-icon">⚡</span>
+        TrendBrief
+      </div>
+
+      <nav class="sidebar-nav">
+        <div class="nav-section">Menu</div>
+        <a class="nav-link" routerLink="/feed" routerLinkActive="active">
+          <span class="nav-icon">📰</span>
+          Feed
+        </a>
+        <a class="nav-link" routerLink="/bookmarks" routerLinkActive="active">
+          <span class="nav-icon">🔖</span>
+          Bookmarks
+        </a>
+        <a class="nav-link" routerLink="/profile" routerLinkActive="active">
+          <span class="nav-icon">👤</span>
+          Profile
+        </a>
+      </nav>
+    </aside>
+  `,
+})
+export class SidebarComponent {}

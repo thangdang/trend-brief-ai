@@ -1,0 +1,166 @@
+// TrendBrief AI — ArchitectUI-inspired global styles
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: #f1f4f6;
+  color: #333;
+  min-height: 100vh;
+}
+
+a {
+  text-decoration: none;
+  color: inherit;
+}
+
+// ArchitectUI-inspired sidebar
+.app-sidebar {
+  width: 260px;
+  min-height: 100vh;
+  background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
+  color: #fff;
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  transition: width 0.3s ease;
+}
+
+.app-sidebar .sidebar-brand {
+  padding: 20px;
+  font-size: 20px;
+  font-weight: 700;
+  color: #fff;
+  border-bottom: 1px solid #334155;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.app-sidebar .sidebar-brand .brand-icon {
+  font-size: 24px;
+}
+
+.app-sidebar .nav-section {
+  padding: 15px 20px 5px;
+  font-size: 11px;
+  text-transform: uppercase;
+  color: #64748b;
+  letter-spacing: 1px;
+}
+
+.app-sidebar .nav-link {
+  color: #94a3b8;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 20px;
+  font-size: 14px;
+  transition: all 0.2s ease;
+  border-left: 3px solid transparent;
+
+  &:hover {
+    color: #fff;
+    background: rgba(255, 255, 255, 0.06);
+  }
+
+  &.active {
+    color: #fff;
+    background: rgba(99, 102, 241, 0.15);
+    border-left-color: #6366f1;
+  }
+}
+
+.app-sidebar .nav-link .nav-icon {
+  width: 20px;
+  text-align: center;
+  font-size: 16px;
+}
+
+// ArchitectUI-inspired header
+.app-header {
+  background: #fff;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  position: sticky;
+  top: 0;
+  z-index: 50;
+}
+
+.app-header .header-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.app-header .header-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.app-header .btn-logout {
+  background: none;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 6px 14px;
+  font-size: 13px;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: #f8fafc;
+    color: #1e293b;
+    border-color: #cbd5e1;
+  }
+}
+
+// Main layout
+.app-layout {
+  display: flex;
+  min-height: 100vh;
+}
+
+.app-main {
+  margin-left: 260px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.app-content {
+  padding: 24px;
+  flex: 1;
+}
+
+// Utility classes
+.card {
+  border: none;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  border-radius: 8px;
+}
+
+.badge-topic {
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-weight: 600;
+  text-transform: uppercase;
+
+  &.topic-ai { background: #ede9fe; color: #6d28d9; }
+  &.topic-finance { background: #dcfce7; color: #15803d; }
+  &.topic-lifestyle { background: #fef3c7; color: #b45309; }
+  &.topic-drama { background: #fce7f3; color: #be185d; }
+}
