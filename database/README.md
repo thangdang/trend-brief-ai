@@ -11,10 +11,10 @@
 # 1. Create collections with validation and indexes
 mongosh trendbriefai database/001_init_collections.js
 
-# 2. Seed RSS sources (6 Vietnamese news sources)
+# 2. Seed RSS sources (38 Vietnamese news sources)
 mongosh trendbriefai database/002_seed_rss_sources.js
 
-# 3. Seed topic categories (8 topics)
+# 3. Seed topic categories (9 topics)
 mongosh trendbriefai database/003_seed_topics.js
 ```
 
@@ -48,7 +48,7 @@ mongosh trendbriefai database/003_seed_topics.js
 
 All collections use JSON Schema validation:
 
-- `articles.topic` only accepts: `ai`, `finance`, `lifestyle`, `drama`, `technology`, `career`, `health`, `entertainment`
+- `articles.topic` only accepts: `ai`, `finance`, `lifestyle`, `drama`, `technology`, `career`, `health`, `entertainment`, `sport`, `insight`
 - `articles.summary_bullets` must be exactly 3 strings
 - `articles.processing_status` only accepts: `pending`, `processing`, `done`, `failed`, `fallback`
 - `interactions.action` only accepts: `view`, `click_original`, `share`, `bookmark`

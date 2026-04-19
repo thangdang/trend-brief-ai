@@ -31,7 +31,7 @@ trendbriefai-ui (Angular 19+)  →  trendbriefai-service
 - 📰 AI-summarized feed (title + 3 bullets + "why you should care")
 - 🔍 Article search (MongoDB text search)
 - 🔥 Trending articles (hot in last 24h)
-- 🏷️ 8 topic filters (AI, Finance, Lifestyle, Drama, Technology, Career, Health, Entertainment)
+- 🏷️ 9 topic filters (AI, Finance, Lifestyle, Drama, Technology, Career, Health, Entertainment, Sport)
 - 👤 Personalized feed ranking (interests + recency + view penalty)
 - 🔖 Bookmarks (idempotent)
 - ⏱️ Reading time estimates (15–60s)
@@ -44,6 +44,8 @@ trendbriefai-ui (Angular 19+)  →  trendbriefai-service
 - 🏷️ Sponsored articles support
 - 🔄 3-layer deduplication (URL hash → title similarity → embedding cosine)
 - ⏰ Auto-crawl every 10 minutes (node-cron + BullMQ)
+- 🌐 Auto-translate non-Vietnamese articles (langdetect + Ollama)
+- 🔍 Auto-discover new VN sources weekly (Google News scan + backlink mining + RSS detect)
 
 ## Quick Start (Docker)
 
@@ -99,7 +101,7 @@ cd trendbriefai-mobile && flutter pub get && flutter run
 
 | Layer | Technology |
 |-------|-----------|
-| AI Engine | Python 3.12, FastAPI, Ollama, sentence-transformers, feedparser, newspaper3k |
+| AI Engine | Python 3.12, FastAPI, Ollama, sentence-transformers, feedparser, newspaper3k, langdetect, lxml |
 | Backend | Node.js 20, Express.js, TypeScript, Mongoose, BullMQ, ioredis, JWT |
 | Web UI | Angular 19+, standalone components, ArchitectUI theme |
 | Mobile | Flutter 3.x, Dio, Provider, flutter_secure_storage |
@@ -107,9 +109,11 @@ cd trendbriefai-mobile && flutter pub get && flutter run
 | Cache/Queue | Redis 7 + BullMQ |
 | Container | Docker Compose |
 
-## RSS Sources (6 Vietnamese)
+## RSS Sources (38 Vietnamese — auto-expanding)
 
-VnExpress · Tuổi Trẻ · Thanh Niên · Zing News · CafeBiz · CafeF
+VnExpress · Tuổi Trẻ · Thanh Niên · Zing News · Dân Trí · VietnamNet · VietnamPlus · Lao Động · VOV · CafeF · CafeBiz · VnEconomy · VietnamBiz · Báo Đầu Tư · Kenh14 · Afamily · Genk · Tinhte · ICT News · Saostar · Bóng Đá Plus · TopDev · TopCV · ITviec · Spiderum · Medium Vietnam + more
+
+> New sources auto-discovered weekly via Google News VN scan + backlink mining.
 
 ## Documentation
 
@@ -126,3 +130,5 @@ VnExpress · Tuổi Trẻ · Thanh Niên · Zing News · CafeBiz · CafeF
 - 3-layer dedup prevents duplicate articles across sources
 - Personalized feed: topic boost + recency + interaction penalty
 - Hybrid deployment: AI engine on local PC, services on VPS ($24/mo)
+- Auto-translate: non-Vietnamese content detected and translated via Ollama
+- Auto-discover: new VN sources found weekly via Google News + backlink mining

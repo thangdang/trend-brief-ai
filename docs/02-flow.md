@@ -34,8 +34,12 @@ trendbriefai-engine:
      b. newspaper3k download + parse → full article text
      c. BeautifulSoup clean (remove HTML, ads, nav)
      d. Skip nếu text < 100 ký tự
-     e. Ollama summarize → title_ai + 3 bullets + reason
-     f. Keyword classify → topic (ai/finance/lifestyle/drama/career/insight)
+     d2. Language detect (langdetect + VN diacritics heuristic ≥5%)
+         → Nếu non-VN (e.g. English từ Medium) → Ollama translate to Vietnamese
+         → Fallback: pass-through untranslated (summarizer prompt sẽ cố gắng)
+     e. Quality score gate (skip nếu < 0.3)
+     f. Ollama summarize → title_ai + 3 bullets + reason
+     g. Keyword classify → topic (ai/finance/lifestyle/drama/career/insight/technology/health/entertainment/sport)
      g. 3-layer dedup:
         - Layer 1: URL hash exact match
         - Layer 2: Title similarity ≥ 0.8 (48h window)
@@ -94,7 +98,7 @@ trendbriefai-service:
 Client hiển thị:
   - Search bar (tìm kiếm bài viết)
   - 🔥 Trending section (bài hot 24h)
-  - Topic filter tabs (All, AI, Finance, Lifestyle, Drama, Career, Insight)
+  - Topic filter tabs (All, AI, Finance, Lifestyle, Drama, Career, Insight, Technology, Health, Entertainment, Sport)
   - Article cards: title_ai, 3 bullets, reason, source, ⏱ reading time
   - Bookmark toggle ☆/★
   - Share button ↗
@@ -146,7 +150,7 @@ trendbriefai-service:
 ## 6. Interest Update Flow
 
 ```
-User vào Profile → chọn topics (AI, Finance, Lifestyle, Drama, Career, Insight)
+User vào Profile → chọn topics (AI, Finance, Lifestyle, Drama, Career, Insight, Technology, Health, Entertainment, Sport)
         ↓
 Client → PUT /api/users/interests {interests: ["ai", "finance"]}
         ↓
@@ -193,10 +197,11 @@ Clean article text + title
 Keyword matching (Vietnamese + English dictionaries):
   - AI: trí tuệ nhân tạo, machine learning, ChatGPT, công nghệ, blockchain...
   - Finance: tài chính, chứng khoán, đầu tư, lương, kinh doanh...
-  - Lifestyle: sức khỏe, du lịch, ẩm thực, thời trang, thể thao...
+  - Lifestyle: sức khỏe, du lịch, ẩm thực, thời trang...
   - Drama: scandal, viral, TikTok, influencer, gossip...
   - Career: nghề nghiệp, tuyển dụng, kiếm tiền, freelance, skill...
   - Insight: phân tích, góc nhìn, deep dive, review, spiderum, medium...
+  - Sport: thể thao, bóng đá, V-League, Premier League, FIFA, SEA Games...
         ↓
 Title keywords: 2x weight
 Text keywords: 1x weight
@@ -319,3 +324,76 @@ Trigger aggregation:
 | D7 Retention | Users active on day X also active on day X+7 |
 | Ad CTR | `Ad.clicks / Ad.impressions` |
 | Affiliate CTR | `AffiliateLink.clicks / AffiliateLink.impressions` |
+
+---
+
+## 14. Translation Flow (Non-Vietnamese Content)
+
+```
+Article cleaned text
+        ↓
+Step 1: VN diacritics heuristic (fast)
+  Count Vietnamese-specific chars in first 2000 chars
+  → ≥5% of alpha chars are VN diacritics → lang = "vi" (skip translation)
+  → <5% → continue to langdetect
+        ↓
+Step 2: langdetect library
+  → Detect language code (vi/en/fr/...)
+  → Error → default "vi" (safe, skip translation)
+        ↓
+Step 3: If lang ≠ "vi" → Ollama translate
+  System prompt: "Dịch chính xác sang tiếng Việt, giữ thuật ngữ chuyên ngành trong ngoặc"
+  Temperature: 0.3 (low for accuracy)
+  → Translate body text + title separately
+  → Sanity check: translated text ≥ 30% length of original
+  → Fail → pass-through untranslated (summarizer prompt tries its best)
+        ↓
+Article stored with:
+  source_lang: "en" (detected language)
+  was_translated: true/false
+```
+
+Trigger: Automatic in pipeline (Step 2b, between clean and quality score).
+Manual test: `POST /translate {text, title}` on AI engine.
+
+---
+
+## 15. Resource Discovery Flow (Auto-Find New Sources)
+
+```
+Weekly cron (Sunday 3:00 AM) OR manual POST /discover
+        ↓
+Step 1: Get existing source domains from rss_sources (skip list)
+        ↓
+Step 2: Google News VN scan
+  Fetch https://news.google.com/rss?hl=vi&gl=VN
+  → Parse RSS XML → extract VN domains from <source> tags
+  → Count domain frequency
+        ↓
+Step 3: Backlink mining
+  Query recent articles (last 7 days, max 500)
+  → Extract outbound URLs from content_clean
+  → Count VN domains referenced ≥3 times
+        ↓
+Step 4: Merge + deduplicate candidates
+  Union Google News + backlink domains
+  Remove already-known domains
+  Rank by total mention count
+        ↓
+Step 5: For each candidate (top 20):
+  a. RSS auto-detect:
+     - Fetch HTML → find <link rel="alternate" type="application/rss+xml">
+     - Fallback: try common paths (/rss, /feed, /rss/home.rss)
+  b. Quality probe:
+     - Fetch homepage → find article links
+     - Download 3 sample articles
+     - Score with ContentQualityScorer (length + structure + VN ratio + spam)
+     - Reject if avg quality < 0.4
+        ↓
+Step 6: Store qualified sources in rss_sources
+  name: "[NEW] Domain Name"
+  is_active: false (requires admin approval)
+  discovery_meta: {domain, rss_detected, mention_count, avg_quality, discovered_via, discovered_at}
+        ↓
+Admin reviews on dashboard → toggle is_active: true → source joins crawl rotation
+```

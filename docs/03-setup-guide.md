@@ -58,7 +58,7 @@ Hoặc chạy init scripts thủ công:
 ```bash
 mongosh trendbriefai database/001_init_collections.js
 mongosh trendbriefai database/002_seed_rss_sources.js
-# → Seeds 12 sources: 8 RSS (news + finance + insight) + 2 HTML scrape (Spiderum, TopDev)
+# → Seeds 38 sources across 10 categories (general, ai, finance, lifestyle, drama, health, entertainment, sport, career, insight)
 ```
 
 ### Bước 3: AI Engine
@@ -213,6 +213,18 @@ curl -X POST http://localhost:8000/crawl \
 # Available topics
 curl http://localhost:3000/api/topics
 
+# --- Translation (AI service) ---
+
+# Detect language + translate
+curl -X POST http://localhost:8000/translate \
+  -H "Content-Type: application/json" \
+  -d '{"text":"OpenAI released GPT-5 with major improvements","title":"GPT-5 Released"}'
+
+# --- Resource Discovery (AI service) ---
+
+# Discover new VN news sources (runs ~2-5 min)
+curl -X POST http://localhost:8000/discover
+
 # --- Monetization (Admin) ---
 
 # Create native ad
@@ -270,6 +282,6 @@ curl -H "Authorization: Bearer TOKEN" \
 | `ECONNREFUSED :8000` | Chạy AI engine: `uvicorn api:app --port 8000` |
 | AI trả lời fallback | Cài Ollama + pull model: `ollama pull llama3` |
 | Flutter `SocketException` | Đổi `baseUrl` trong `lib/config/api_config.dart` |
-| Feed trống | Trigger crawl thủ công qua POST /crawl. Seed data có 12 sources (8 RSS + 2 HTML scrape) |
+| Feed trống | Trigger crawl thủ công qua POST /crawl. Seed data có 38 sources across 10 categories |
 | Redis connection refused | `docker start trendbriefai-redis` |
 | BullMQ jobs stuck | Check Redis: `redis-cli KEYS bull:*` |

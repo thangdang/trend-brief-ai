@@ -57,7 +57,7 @@ TrendBrief AI là ứng dụng giúp người trẻ Việt Nam (Gen Z, 18–30) 
 - `Bookmark` — user_id, article_id (unique compound)
 - `Interaction` — user_id, article_id, action (view/click_original/share/bookmark)
 
-Topics: `ai`, `finance`, `lifestyle`, `drama`, `technology`, `career`, `health`, `entertainment`
+Topics: `ai`, `finance`, `lifestyle`, `drama`, `technology`, `career`, `health`, `entertainment`, `sport`, `insight`
 - `RssSource` — name, url, category, source_type (rss/html_scrape/api), is_active, crawl_interval_minutes, last_crawled_at, scrape_link_selector, scrape_content_selector
 - `Ad` — title, description, image_url, target_url, advertiser, topic, status, start/end_date, impressions, clicks, budget_cents, spent_cents
 - `AffiliateLink` — title, url, topic, commission, provider, is_active, clicks, impressions, conversions
@@ -113,18 +113,23 @@ Topics: `ai`, `finance`, `lifestyle`, `drama`, `technology`, `career`, `health`,
 | Embedding | sentence-transformers (all-MiniLM-L6-v2, 384-dim) — free, local |
 | Crawler | feedparser + newspaper3k + httpx (HTML scrape) |
 | Cleaner | BeautifulSoup4 |
-| Classifier | Keyword-based (Vietnamese + English), 8 topics |
+| Classifier | Keyword-based (Vietnamese + English), 9 topics + zero-shot hybrid |
 | Dedup | 3-layer: URL hash + Title similarity + Embedding cosine |
 | Quality Scorer | Weighted signal scoring (length, structure, Vietnamese ratio, spam) — pre-summarization gate |
-| Scraper | HTML listing page crawler (httpx + BeautifulSoup) cho nguồn không có RSS (Spiderum, TopDev) |
+| Scraper | HTML listing page crawler (httpx + BeautifulSoup) cho nguồn không có RSS |
+| Translator | Language detection (langdetect + VN heuristic) + Ollama translation to Vietnamese |
+| Discovery | Auto-find new VN news sources (Google News scan + backlink mining + RSS detect + quality probe) |
 
 **AI Pipeline:**
 ```
 Source (RSS/HTML) → feedparser or httpx+BeautifulSoup → newspaper3k → BeautifulSoup clean
+→ Language detect (langdetect + VN diacritics heuristic)
+→ Translate to Vietnamese if non-VN (Ollama, fallback: pass-through)
+→ Quality score gate (skip if < 0.3)
 → Ollama summarize (title_ai + 3 bullets + reason)
-→ Keyword classify (ai/finance/lifestyle/drama/technology/career/health/entertainment)
+→ Keyword classify (ai/finance/lifestyle/drama/technology/career/health/entertainment/sport/insight)
 → 3-layer dedup (URL hash → title ≥0.8 → embedding ≥0.8)
-→ MongoDB store
+→ MongoDB store (with source_lang + was_translated metadata)
 ```
 
 **AI Endpoints:**
@@ -132,8 +137,10 @@ Source (RSS/HTML) → feedparser or httpx+BeautifulSoup → newspaper3k → Beau
 | Endpoint | Mô tả |
 |----------|-------|
 | `POST /crawl` | Crawl source → full pipeline (RSS or HTML scrape) |
-| `POST /process` | Process single article (clean + summarize + classify) |
+| `POST /process` | Process single article (clean + translate + summarize + classify) |
 | `POST /dedup/check` | Check duplicate |
+| `POST /translate` | Detect language + translate to Vietnamese |
+| `POST /discover` | Auto-discover new VN news sources (Google News + backlinks + RSS detect + quality probe) |
 | `GET /health` | Health check |
 
 **Summarization Prompt:**
@@ -160,7 +167,7 @@ Tone: trẻ, dễ hiểu
 - Login / Register — form validation, JWT storage
 - Feed — article cards, topic filter tabs, search bar, trending section, infinite scroll, bookmark toggle, share button, reading time, native ads, affiliate links
 - Bookmarks — saved articles, remove
-- Profile — interest selection (AI, Finance, Lifestyle, Drama, Technology, Career, Health, Entertainment)
+- Profile — interest selection (AI, Finance, Lifestyle, Drama, Technology, Career, Health, Entertainment, Sport)
 
 ### 4. trendbriefai-mobile (Flutter App)
 
@@ -188,7 +195,7 @@ Tone: trẻ, dễ hiểu
 ```
 users {
   _id, email (unique), password_hash,
-  interests[] (ai/finance/lifestyle/drama/technology/career/health/entertainment),
+  interests[] (ai/finance/lifestyle/drama/technology/career/health/entertainment/sport/insight),
   created_at, updated_at
 }
 
@@ -196,10 +203,11 @@ articles {
   _id, url (unique), url_hash (unique, MD5),
   title_original, title_ai, summary_bullets[3],
   reason, content_clean,
-  topic (ai/finance/lifestyle/drama/technology/career/health/entertainment),
+  topic (ai/finance/lifestyle/drama/technology/career/health/entertainment/sport/insight),
   source, published_at, embedding[384],
   cluster_id, processing_status (pending/processing/done/failed/fallback),
   is_sponsored, sponsor_name, sponsor_url,
+  source_lang (vi/en/...), was_translated (bool),
   created_at
 }
 Index: topic, created_at DESC, url_hash, source, processing_status,
@@ -229,6 +237,7 @@ rss_sources {
   is_active, crawl_interval_minutes,
   last_crawled_at,
   scrape_link_selector, scrape_content_selector,
+  discovery_meta {domain, rss_detected, mention_count, avg_quality, discovered_via[], discovered_at},
   created_at
 }
 Index: is_active, source_type
@@ -284,21 +293,41 @@ topics {
 Index: key (unique), order, is_active
 ```
 
-## Content Sources (12 nguồn Việt Nam)
+## Content Sources (38 nguồn Việt Nam)
 
-| Nguồn | URL | Category | Type |
-|-------|-----|----------|------|
-| VnExpress | vnexpress.net/rss/tin-moi-nhat.rss | general | rss |
-| VnExpress Công nghệ | vnexpress.net/rss/so-hoa.rss | general | rss |
-| VnExpress Kinh doanh | vnexpress.net/rss/kinh-doanh.rss | finance | rss |
-| Tuổi Trẻ | tuoitre.vn/rss/tin-moi-nhat.rss | general | rss |
-| Thanh Niên | thanhnien.vn/rss/home.rss | general | rss |
-| Zing News | zingnews.vn/rss/tin-moi.rss | general | rss |
-| CafeBiz | cafebiz.vn/rss/home.rss | finance | rss |
-| CafeF | cafef.vn/rss/home.rss | finance | rss |
-| Medium Vietnam | medium.com/feed/tag/vietnam | insight | rss |
-| Spiderum | spiderum.com/bai-dang/moi | insight | html_scrape |
-| TopDev | topdev.vn/blog | career | html_scrape |
+Sources are defined in `spec/resources.json` (9 topics × ~20 URLs each) and seeded via `database/002_seed_rss_sources.js`.
+
+| Category | RSS | HTML Scrape | Total | Key Sources |
+|----------|-----|-------------|-------|-------------|
+| general | 9 | 0 | 9 | VnExpress, Tuổi Trẻ, Thanh Niên, Zing, Dân Trí, VietnamNet, VietnamPlus, Lao Động, VOV |
+| ai | 8 | 6 | 14 | VnExpress Số hóa, ICT News, Genk, Tinhte, Dân Trí CN, VOV CN |
+| finance | 9 | 7 | 16 | CafeF, CafeBiz, VnEconomy, VietnamBiz, Báo Đầu Tư, Vietstock |
+| lifestyle | 8 | 5 | 13 | Kenh14, VnExpress Đời sống, Afamily, Eva |
+| drama | 7 | 7 | 14 | Kenh14 Star, Zing Giải trí, Saostar, Tiin |
+| health | 2 | 0 | 2 | VnExpress Sức khỏe, Sức khỏe Đời sống |
+| entertainment | 1 | 0 | 1 | VnExpress Giải trí |
+| sport | 2 | 1 | 3 | VnExpress Thể thao, Bóng Đá Plus, Thể Thao 247 |
+| career | 1 | 3 | 4 | VnExpress Giáo dục, TopDev, TopCV, ITviec |
+| insight | 1 | 1 | 2 | Medium Vietnam, Spiderum |
+
+> New sources are auto-discovered weekly by the Resource Discovery Service (Google News VN scan + backlink mining). Discovered sources are stored with `is_active: false` for admin review.
+
+## Resource Discovery (Auto)
+
+Weekly cron (Sunday 3:00 AM) runs the discovery pipeline:
+
+```
+Google News VN RSS scan → extract popular VN domains
+Backlink mining → scan recent articles for outbound VN domain links
+    → merge + deduplicate (skip existing sources)
+    → for each candidate:
+        1. RSS auto-detect (<link rel="alternate"> + common paths)
+        2. Quality probe (fetch 3 articles, score content quality)
+        3. If quality ≥ 0.4 → store as rss_sources with is_active=false
+    → admin reviews on dashboard → toggle is_active=true
+```
+
+Manual trigger: `POST /discover` on AI engine.
 
 ## Feed Personalization Algorithm
 
