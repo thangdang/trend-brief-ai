@@ -15,6 +15,7 @@ from services.cleaner import clean_html
 from services.classifier import classify_topic
 from services.dedup import deduplicate_article, url_hash
 from services.summarizer import generate_summary
+from services.translator import detect_language, translate_to_vietnamese, ensure_vietnamese
 
 logger = logging.getLogger(__name__)
 
@@ -188,6 +189,11 @@ async def process_article(req: ProcessRequest):
                 detail="Cleaned content too short (< 100 chars)",
             )
 
+        # Translate if non-Vietnamese
+        tr = await ensure_vietnamese(content_clean, req.title)
+        content_clean = tr["text"]
+        title_for_classify = tr["title"]
+
         # Summarize
         summary = await generate_summary(content_clean)
         processing_status = "done"
@@ -197,7 +203,7 @@ async def process_article(req: ProcessRequest):
             processing_status = "fallback"
 
         # Classify
-        topic = await classify_topic(content_clean, req.title)
+        topic = await classify_topic(content_clean, title_for_classify)
 
         return ProcessResponse(
             title_ai=summary["title_ai"],
@@ -228,3 +234,72 @@ async def dedup_check(req: DedupCheckRequest):
     except Exception:
         logger.exception("Dedup check failed for %s", req.url)
         raise HTTPException(status_code=500, detail="Dedup check failed")
+
+
+# ---------------------------------------------------------------------------
+# Translation endpoint
+# ---------------------------------------------------------------------------
+
+class TranslateRequest(BaseModel):
+    text: str
+    title: str = ""
+
+
+class TranslateResponse(BaseModel):
+    text: str
+    title: str
+    source_lang: str
+    translated: bool
+
+
+@app.post("/translate", response_model=TranslateResponse)
+async def translate(req: TranslateRequest):
+    """Detect language and translate to Vietnamese if needed."""
+    try:
+        result = await ensure_vietnamese(req.text, req.title)
+        return TranslateResponse(**result)
+    except Exception:
+        logger.exception("Translation failed")
+        raise HTTPException(status_code=500, detail="Translation failed")
+
+
+# ---------------------------------------------------------------------------
+# Resource Discovery endpoint
+# ---------------------------------------------------------------------------
+
+class DiscoveryResponse(BaseModel):
+    discovered: int
+    stored: int
+    sources: list[dict]
+
+
+@app.post("/discover", response_model=DiscoveryResponse)
+async def discover_sources():
+    """Run resource discovery pipeline — find new VN news sources.
+
+    Scans Google News VN + backlinks from recent articles.
+    Probes each candidate for RSS feeds and content quality.
+    Stores qualified sources with is_active=false for admin review.
+    """
+    from services.discovery import discover_new_sources
+    try:
+        db = get_db()
+        discoveries = await discover_new_sources(db)
+        stored = sum(1 for d in discoveries if d.get("avg_quality", 0) > 0)
+        return DiscoveryResponse(
+            discovered=len(discoveries),
+            stored=stored,
+            sources=[{
+                "domain": d["domain"],
+                "name": d["name"],
+                "url": d["url"],
+                "source_type": d["source_type"],
+                "rss_detected": d["rss_detected"],
+                "quality": d["avg_quality"],
+                "mentions": d["mention_count"],
+                "via": d["discovered_via"],
+            } for d in discoveries],
+        )
+    except Exception:
+        logger.exception("Discovery pipeline failed")
+        raise HTTPException(status_code=500, detail="Discovery pipeline failed")

@@ -78,4 +78,23 @@ export function startCrawlScheduler(): void {
   }).catch((err) => {
     console.error('[CrawlScheduler] Failed to enqueue initial crawl:', err.message);
   });
+
+  // Weekly resource discovery — every Sunday 3:00 AM
+  cron.schedule('0 3 * * 0', async () => {
+    console.log('[CrawlScheduler] Running weekly resource discovery...');
+    try {
+      const resp = await axios.post(`${config.aiServiceUrl}/discover`, {}, { timeout: 300000 });
+      const data = resp.data;
+      console.log(`[CrawlScheduler] Discovery complete: ${data.discovered} found, ${data.stored} stored`);
+      if (data.sources?.length > 0) {
+        console.log('[CrawlScheduler] New sources (pending admin review):');
+        for (const s of data.sources) {
+          console.log(`  - ${s.name} (${s.domain}) [${s.source_type}] quality=${s.quality} via=${s.via.join(',')}`);
+        }
+      }
+    } catch (err: any) {
+      console.error('[CrawlScheduler] Discovery failed:', err.message);
+    }
+  });
+  console.log('[CrawlScheduler] Weekly resource discovery scheduled: Sunday 3:00 AM');
 }

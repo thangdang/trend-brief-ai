@@ -17,6 +17,7 @@ from services.summarizer import generate_summary
 from services.classifier import classify_topic
 from services.dedup import deduplicate_article, url_hash
 from services.quality_scorer import ContentQualityScorer
+from services.translator import ensure_vietnamese
 
 logger = logging.getLogger(__name__)
 
@@ -73,6 +74,13 @@ async def _process_single_article(
             clean_text = cleaned["text"]
             title = cleaned["title"] or entry.get("title", "")
 
+            # Step 2b: Detect language + translate to Vietnamese if needed
+            tr = await ensure_vietnamese(clean_text, title)
+            clean_text = tr["text"]
+            title = tr["title"]
+            was_translated = tr["translated"]
+            source_lang = tr["source_lang"]
+
             # Step 3: Quality scoring gate
             if quality_scorer is not None:
                 signals = quality_scorer.score(clean_text)
@@ -126,7 +134,7 @@ async def _process_single_article(
             article_doc = {
                 "url": entry_url,
                 "url_hash": hash_val,
-                "title_original": title,
+                "title_original": cleaned["title"] or entry.get("title", ""),
                 "title_ai": summary.get("title_ai", ""),
                 "summary_bullets": summary.get("summary_bullets", []),
                 "reason": summary.get("reason", ""),
@@ -137,6 +145,8 @@ async def _process_single_article(
                 "embedding": dedup_result.get("embedding"),
                 "cluster_id": dedup_result.get("cluster_id"),
                 "processing_status": processing_status,
+                "source_lang": source_lang,
+                "was_translated": was_translated,
                 "created_at": datetime.utcnow(),
             }
             await articles_col.insert_one(article_doc)

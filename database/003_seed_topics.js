@@ -81,6 +81,15 @@ const topics = [
     is_active: true,
     created_at: now,
   },
+  {
+    key: 'sport',
+    label: 'Thể thao',
+    icon: 'sports_soccer',
+    color: '#00BCD4',
+    order: NumberInt(9),
+    is_active: true,
+    created_at: now,
+  },
 ];
 
 // Clear existing topic data

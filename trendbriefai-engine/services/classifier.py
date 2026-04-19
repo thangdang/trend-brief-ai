@@ -9,7 +9,7 @@ from config import settings
 logger = logging.getLogger(__name__)
 
 # Valid topics
-VALID_TOPICS = ("ai", "finance", "lifestyle", "drama", "career", "insight")
+VALID_TOPICS = ("ai", "finance", "lifestyle", "drama", "career", "insight", "sport")
 
 # Keyword lists per topic (Vietnamese + English)
 TOPIC_KEYWORDS: Dict[str, List[str]] = {
@@ -35,7 +35,7 @@ TOPIC_KEYWORDS: Dict[str, List[str]] = {
     "lifestyle": [
         "sức khỏe", "du lịch", "ẩm thực", "thời trang", "làm đẹp",
         "tình yêu", "gia đình", "giải trí", "phim", "nhạc", "sách",
-        "thể thao", "fitness", "yoga", "meditation",
+        "fitness", "yoga", "meditation",
         "nấu ăn", "gym", "skincare", "makeup", "travel", "food",
         "recipe", "công thức", "dinh dưỡng", "giảm cân", "tập luyện",
         "thiền", "phong cách sống", "nhà cửa", "nội thất", "thú cưng",
@@ -71,6 +71,16 @@ TOPIC_KEYWORDS: Dict[str, List[str]] = {
         "kinh nghiệm", "chia sẻ", "câu chuyện", "story", "perspective",
         "research", "nghiên cứu", "xu hướng", "dự đoán", "forecast",
         "case study", "thống kê", "data", "infographic",
+    ],
+    "sport": [
+        "thể thao", "bóng đá", "bóng rổ", "tennis", "bơi lội",
+        "điền kinh", "olympic", "world cup", "v-league", "premier league",
+        "champions league", "la liga", "serie a", "bundesliga",
+        "cầu thủ", "huấn luyện viên", "trận đấu", "tỷ số", "bàn thắng",
+        "chuyển nhượng", "giải đấu", "huy chương", "vô địch",
+        "football", "soccer", "basketball", "f1", "formula 1",
+        "mma", "boxing", "esports", "sea games", "asiad",
+        "đội tuyển", "fifa", "afc", "vff", "ngoại hạng anh",
     ],
 }
 
@@ -160,6 +170,7 @@ class HybridClassifier:
         "drama": "giải trí showbiz và mạng xã hội",
         "career": "nghề nghiệp và phát triển bản thân",
         "insight": "phân tích chuyên sâu và góc nhìn",
+        "sport": "thể thao và bóng đá",
     }
 
     def __init__(
