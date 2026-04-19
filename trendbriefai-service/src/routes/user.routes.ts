@@ -9,7 +9,59 @@ import { getUserStats } from '../services/userStats.service';
 
 const router = Router();
 
-// GET /api/users/me
+/**
+ * @swagger
+ * /users/me:
+ *   get:
+ *     tags: [Users]
+ *     summary: Get current user profile
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: User profile
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 id:
+ *                   type: string
+ *                 email:
+ *                   type: string
+ *                   format: email
+ *                 interests:
+ *                   type: array
+ *                   items:
+ *                     type: string
+ *                 onboardingCompleted:
+ *                   type: boolean
+ *                 notificationsEnabled:
+ *                   type: boolean
+ *                 settings:
+ *                   type: object
+ *                 createdAt:
+ *                   type: string
+ *                   format: date-time
+ *       404:
+ *         description: User not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: Failed to fetch profile
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
 router.get('/me', authMiddleware, async (req: Request, res: Response) => {
   try {
     const user = await User.findById(req.user!.id).select('-password_hash');
@@ -28,7 +80,64 @@ router.get('/me', authMiddleware, async (req: Request, res: Response) => {
   }
 });
 
-// PUT /api/users/interests
+/**
+ * @swagger
+ * /users/interests:
+ *   put:
+ *     tags: [Users]
+ *     summary: Update user interests
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [interests]
+ *             properties:
+ *               interests:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *     responses:
+ *       200:
+ *         description: Updated user profile
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 id:
+ *                   type: string
+ *                 email:
+ *                   type: string
+ *                 interests:
+ *                   type: array
+ *                   items:
+ *                     type: string
+ *                 createdAt:
+ *                   type: string
+ *                   format: date-time
+ *       404:
+ *         description: User not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: Failed to update interests
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
 router.put('/interests', authMiddleware, validate(updateInterestsSchema), async (req: Request, res: Response) => {
   try {
     const { interests } = req.body;
@@ -56,7 +165,48 @@ router.put('/interests', authMiddleware, validate(updateInterestsSchema), async 
   }
 });
 
-// GET /api/users/me/history
+/**
+ * @swagger
+ * /users/me/history:
+ *   get:
+ *     tags: [Users]
+ *     summary: Get reading history
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *         description: Page number
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 20
+ *           maximum: 50
+ *         description: Items per page
+ *     responses:
+ *       200:
+ *         description: Paginated reading history
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/FeedResponse'
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: Failed to fetch reading history
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
 router.get('/me/history', authMiddleware, async (req: Request, res: Response) => {
   try {
     const page = Math.max(parseInt(req.query.page as string, 10) || 1, 1);
@@ -68,7 +218,34 @@ router.get('/me/history', authMiddleware, async (req: Request, res: Response) =>
   }
 });
 
-// GET /api/users/me/stats
+/**
+ * @swagger
+ * /users/me/stats:
+ *   get:
+ *     tags: [Users]
+ *     summary: Get user statistics
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: User statistics
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: Failed to fetch user stats
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
 router.get('/me/stats', authMiddleware, async (req: Request, res: Response) => {
   try {
     const stats = await getUserStats(req.user!.id);
@@ -78,7 +255,70 @@ router.get('/me/stats', authMiddleware, async (req: Request, res: Response) => {
   }
 });
 
-// POST /api/users/me/onboarding
+/**
+ * @swagger
+ * /users/me/onboarding:
+ *   post:
+ *     tags: [Users]
+ *     summary: Complete user onboarding with interests
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [interests]
+ *             properties:
+ *               interests:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 minItems: 1
+ *     responses:
+ *       200:
+ *         description: Onboarding completed
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 id:
+ *                   type: string
+ *                 email:
+ *                   type: string
+ *                 interests:
+ *                   type: array
+ *                   items:
+ *                     type: string
+ *                 onboardingCompleted:
+ *                   type: boolean
+ *       400:
+ *         description: At least one interest is required
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       404:
+ *         description: User not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: Failed to save onboarding
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
 router.post('/me/onboarding', authMiddleware, async (req: Request, res: Response) => {
   try {
     const { interests } = req.body;
@@ -107,7 +347,56 @@ router.post('/me/onboarding', authMiddleware, async (req: Request, res: Response
   }
 });
 
-// PUT /api/users/me/settings
+/**
+ * @swagger
+ * /users/me/settings:
+ *   put:
+ *     tags: [Users]
+ *     summary: Update user settings
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               notifications_enabled:
+ *                 type: boolean
+ *               theme:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Updated settings
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 notificationsEnabled:
+ *                   type: boolean
+ *                 settings:
+ *                   type: object
+ *       404:
+ *         description: User not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: Failed to update settings
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
 router.put('/me/settings', authMiddleware, async (req: Request, res: Response) => {
   try {
     const updates: Record<string, unknown> = {};

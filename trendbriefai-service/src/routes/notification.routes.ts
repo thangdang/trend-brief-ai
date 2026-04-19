@@ -4,7 +4,56 @@ import { registerToken, unregisterToken } from '../services/notification.service
 
 const router = Router();
 
-// POST /api/notifications/register
+/**
+ * @swagger
+ * /notifications/register:
+ *   post:
+ *     tags: [Notifications]
+ *     summary: Register a device push token
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [token, platform]
+ *             properties:
+ *               token:
+ *                 type: string
+ *               platform:
+ *                 type: string
+ *                 enum: [ios, android]
+ *     responses:
+ *       200:
+ *         description: Device token registered
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *       400:
+ *         description: Invalid request body
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: Failed to register token
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
 router.post('/register', authMiddleware, async (req: Request, res: Response) => {
   try {
     const { token, platform } = req.body;
@@ -19,7 +68,53 @@ router.post('/register', authMiddleware, async (req: Request, res: Response) => 
   }
 });
 
-// DELETE /api/notifications/unregister
+/**
+ * @swagger
+ * /notifications/unregister:
+ *   delete:
+ *     tags: [Notifications]
+ *     summary: Unregister a device push token
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [token]
+ *             properties:
+ *               token:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Device token unregistered
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *       400:
+ *         description: Token required
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: Failed to unregister token
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
 router.delete('/unregister', authMiddleware, async (req: Request, res: Response) => {
   try {
     const { token } = req.body;

@@ -7,6 +7,66 @@ const router = Router();
 
 const VALID_TOPICS: Topic[] = ['ai', 'finance', 'lifestyle', 'drama'];
 
+/**
+ * @swagger
+ * /search:
+ *   get:
+ *     tags: [Search]
+ *     summary: Search articles by keyword
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: q
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Search query
+ *       - in: query
+ *         name: topic
+ *         schema:
+ *           type: string
+ *           enum: [ai, finance, lifestyle, drama]
+ *         description: Filter by topic
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *         description: Page number
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 20
+ *           maximum: 50
+ *         description: Items per page
+ *     responses:
+ *       200:
+ *         description: Search results
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/FeedResponse'
+ *       400:
+ *         description: Missing query parameter
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: Failed to search articles
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
 router.get('/', authMiddleware, async (req: Request, res: Response) => {
   try {
     const q = (req.query.q as string | undefined)?.trim();

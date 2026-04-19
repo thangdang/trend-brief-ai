@@ -6,6 +6,36 @@ import { listAds, createAd, updateAd, trackAdClick } from '../services/ad.servic
 
 const router = Router();
 
+/**
+ * @swagger
+ * /ads:
+ *   get:
+ *     tags: [Ads]
+ *     summary: List all ads
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of ads
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/Ad'
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: Failed to list ads
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
 // Admin routes
 router.get('/', authMiddleware, async (_req: Request, res: Response) => {
   try {
@@ -17,6 +47,54 @@ router.get('/', authMiddleware, async (_req: Request, res: Response) => {
   }
 });
 
+/**
+ * @swagger
+ * /ads:
+ *   post:
+ *     tags: [Ads]
+ *     summary: Create a new ad
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [title, image_url, target_url, placement]
+ *             properties:
+ *               title:
+ *                 type: string
+ *               image_url:
+ *                 type: string
+ *                 format: uri
+ *               target_url:
+ *                 type: string
+ *                 format: uri
+ *               placement:
+ *                 type: string
+ *               is_active:
+ *                 type: boolean
+ *     responses:
+ *       201:
+ *         description: Ad created
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Ad'
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: Failed to create ad
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
 router.post('/', authMiddleware, validate(createAdSchema), async (req: Request, res: Response) => {
   try {
     const ad = await createAd(req.body);
@@ -27,6 +105,60 @@ router.post('/', authMiddleware, validate(createAdSchema), async (req: Request, 
   }
 });
 
+/**
+ * @swagger
+ * /ads/{id}:
+ *   put:
+ *     tags: [Ads]
+ *     summary: Update an ad
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Ad ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               title:
+ *                 type: string
+ *               image_url:
+ *                 type: string
+ *                 format: uri
+ *               target_url:
+ *                 type: string
+ *                 format: uri
+ *               placement:
+ *                 type: string
+ *               is_active:
+ *                 type: boolean
+ *     responses:
+ *       200:
+ *         description: Ad updated
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Ad'
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: Failed to update ad
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
 router.put('/:id', authMiddleware, validate(updateAdSchema), async (req: Request, res: Response) => {
   try {
     const ad = await updateAd(req.params.id, req.body);
@@ -37,6 +169,36 @@ router.put('/:id', authMiddleware, validate(updateAdSchema), async (req: Request
   }
 });
 
+/**
+ * @swagger
+ * /ads/{id}/click:
+ *   post:
+ *     tags: [Ads]
+ *     summary: Track an ad click
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Ad ID
+ *     responses:
+ *       200:
+ *         description: Click tracked
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *       500:
+ *         description: Failed to track click
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
 // Public route
 router.post('/:id/click', async (req: Request, res: Response) => {
   try {

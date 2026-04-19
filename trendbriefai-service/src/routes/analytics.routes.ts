@@ -5,6 +5,57 @@ import { getDAU, getMAU, getRetentionD7, getAvgSessionsPerUser, getAvgArticlesPe
 
 const router = Router();
 
+/**
+ * @swagger
+ * /analytics:
+ *   get:
+ *     tags: [Analytics]
+ *     summary: Get daily analytics for a date range
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: startDate
+ *         required: true
+ *         schema:
+ *           type: string
+ *           example: '2026-04-01'
+ *         description: Start date (YYYY-MM-DD)
+ *       - in: query
+ *         name: endDate
+ *         required: true
+ *         schema:
+ *           type: string
+ *           example: '2026-04-15'
+ *         description: End date (YYYY-MM-DD)
+ *     responses:
+ *       200:
+ *         description: Daily analytics data
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/Analytics'
+ *       400:
+ *         description: Missing required query params
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: Failed to get analytics
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
 router.get('/', authMiddleware, async (req: Request, res: Response) => {
   try {
     const startDate = req.query.startDate as string;
@@ -23,6 +74,34 @@ router.get('/', authMiddleware, async (req: Request, res: Response) => {
   }
 });
 
+/**
+ * @swagger
+ * /analytics/aggregate:
+ *   post:
+ *     tags: [Analytics]
+ *     summary: Trigger today's analytics aggregation
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Aggregation result
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Analytics'
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: Failed to aggregate analytics
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
 router.post('/aggregate', authMiddleware, async (_req: Request, res: Response) => {
   try {
     const result = await aggregateToday();
@@ -33,6 +112,46 @@ router.post('/aggregate', authMiddleware, async (_req: Request, res: Response) =
   }
 });
 
+/**
+ * @swagger
+ * /analytics/dau:
+ *   get:
+ *     tags: [Analytics]
+ *     summary: Get daily active users count
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: date
+ *         schema:
+ *           type: string
+ *           example: '2026-04-16'
+ *         description: Date (YYYY-MM-DD), defaults to today
+ *     responses:
+ *       200:
+ *         description: DAU count
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 date:
+ *                   type: string
+ *                 dau:
+ *                   type: integer
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: Failed to get DAU
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
 // GET /api/analytics/dau?date=2026-04-16
 router.get('/dau', authMiddleware, async (req: Request, res: Response) => {
   try {
@@ -44,6 +163,46 @@ router.get('/dau', authMiddleware, async (req: Request, res: Response) => {
   }
 });
 
+/**
+ * @swagger
+ * /analytics/mau:
+ *   get:
+ *     tags: [Analytics]
+ *     summary: Get monthly active users count
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: month
+ *         schema:
+ *           type: string
+ *           example: '2026-04'
+ *         description: Month (YYYY-MM), defaults to current month
+ *     responses:
+ *       200:
+ *         description: MAU count
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 month:
+ *                   type: string
+ *                 mau:
+ *                   type: integer
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: Failed to get MAU
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
 // GET /api/analytics/mau?month=2026-04
 router.get('/mau', authMiddleware, async (req: Request, res: Response) => {
   try {
@@ -55,6 +214,48 @@ router.get('/mau', authMiddleware, async (req: Request, res: Response) => {
   }
 });
 
+/**
+ * @swagger
+ * /analytics/retention:
+ *   get:
+ *     tags: [Analytics]
+ *     summary: Get D7 retention for a cohort date
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: cohortDate
+ *         required: true
+ *         schema:
+ *           type: string
+ *           example: '2026-04-09'
+ *         description: Cohort date (YYYY-MM-DD)
+ *     responses:
+ *       200:
+ *         description: Retention data
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *       400:
+ *         description: Missing cohortDate param
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: Failed to get retention
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
 // GET /api/analytics/retention?cohortDate=2026-04-09
 router.get('/retention', authMiddleware, async (req: Request, res: Response) => {
   try {
@@ -70,6 +271,64 @@ router.get('/retention', authMiddleware, async (req: Request, res: Response) => 
   }
 });
 
+/**
+ * @swagger
+ * /analytics/engagement:
+ *   get:
+ *     tags: [Analytics]
+ *     summary: Get engagement metrics for a date range
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: startDate
+ *         required: true
+ *         schema:
+ *           type: string
+ *           example: '2026-04-01'
+ *         description: Start date (YYYY-MM-DD)
+ *       - in: query
+ *         name: endDate
+ *         required: true
+ *         schema:
+ *           type: string
+ *           example: '2026-04-16'
+ *         description: End date (YYYY-MM-DD)
+ *     responses:
+ *       200:
+ *         description: Engagement metrics
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 startDate:
+ *                   type: string
+ *                 endDate:
+ *                   type: string
+ *                 avgSessionsPerUser:
+ *                   type: number
+ *                 avgArticlesPerUser:
+ *                   type: number
+ *       400:
+ *         description: Missing required query params
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: Failed to get engagement metrics
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
 // GET /api/analytics/engagement?startDate=2026-04-01&endDate=2026-04-16
 router.get('/engagement', authMiddleware, async (req: Request, res: Response) => {
   try {

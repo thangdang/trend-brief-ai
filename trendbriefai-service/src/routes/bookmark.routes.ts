@@ -6,7 +6,50 @@ import { addBookmark, removeBookmark, getBookmarks } from '../services/bookmark.
 
 const router = Router();
 
-// POST /api/bookmarks
+/**
+ * @swagger
+ * /bookmarks:
+ *   post:
+ *     tags: [Bookmarks]
+ *     summary: Add a bookmark
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [articleId]
+ *             properties:
+ *               articleId:
+ *                 type: string
+ *     responses:
+ *       201:
+ *         description: Bookmark created
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Bookmark'
+ *       200:
+ *         description: Bookmark already existed
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Bookmark'
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: Failed to add bookmark
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
 router.post('/', authMiddleware, validate(bookmarkSchema), async (req: Request, res: Response) => {
   try {
     const { articleId } = req.body;
@@ -17,7 +60,43 @@ router.post('/', authMiddleware, validate(bookmarkSchema), async (req: Request, 
   }
 });
 
-// DELETE /api/bookmarks/:id
+/**
+ * @swagger
+ * /bookmarks/{id}:
+ *   delete:
+ *     tags: [Bookmarks]
+ *     summary: Remove a bookmark
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Bookmark ID
+ *     responses:
+ *       204:
+ *         description: Bookmark removed
+ *       404:
+ *         description: Bookmark not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: Failed to remove bookmark
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
 router.delete('/:id', authMiddleware, async (req: Request, res: Response) => {
   try {
     const deleted = await removeBookmark(req.params.id, req.user!.id);
@@ -31,7 +110,59 @@ router.delete('/:id', authMiddleware, async (req: Request, res: Response) => {
   }
 });
 
-// GET /api/bookmarks
+/**
+ * @swagger
+ * /bookmarks:
+ *   get:
+ *     tags: [Bookmarks]
+ *     summary: List user bookmarks
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *         description: Page number
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 20
+ *           maximum: 50
+ *         description: Items per page
+ *     responses:
+ *       200:
+ *         description: Paginated list of bookmarks
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 bookmarks:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Bookmark'
+ *                 page:
+ *                   type: integer
+ *                 total_pages:
+ *                   type: integer
+ *                 total:
+ *                   type: integer
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: Failed to fetch bookmarks
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
 router.get('/', authMiddleware, async (req: Request, res: Response) => {
   try {
     const page = Math.max(1, parseInt(req.query.page as string) || 1);
