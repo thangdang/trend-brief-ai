@@ -1,6 +1,8 @@
 import express from 'express';
 import cors from 'cors';
+import swaggerUi from 'swagger-ui-express';
 import { config } from './config';
+import { swaggerSpec } from './config/swagger';
 import { connectDatabase } from './db/connection';
 import { generalLimiter, authLimiter } from './middleware/rateLimit';
 
@@ -30,6 +32,15 @@ app.get('/health', (_req, res) => {
   res.json({ status: 'ok' });
 });
 
+// Swagger docs
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
+  customSiteTitle: 'TrendBrief AI – API Docs',
+  customCss: '.swagger-ui .topbar { display: none }',
+}));
+app.get('/api-docs.json', (_req, res) => {
+  res.json(swaggerSpec);
+});
+
 // Routes
 app.use('/api/auth', authLimiter, authRoutes);
 app.use('/api/feed', feedRoutes);
@@ -50,6 +61,7 @@ async function start() {
 
   app.listen(config.port, () => {
     console.log(`🚀 TrendBrief API running on port ${config.port}`);
+    console.log(`📚 Swagger docs: http://localhost:${config.port}/api-docs`);
   });
 }
 
