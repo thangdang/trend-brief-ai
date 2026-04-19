@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../providers/onboarding_provider.dart';
 import '../services/auth_service.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -24,7 +25,14 @@ class _LoginScreenState extends State<LoginScreen> {
             _emailCtrl.text.trim(),
             _passwordCtrl.text,
           );
-      if (mounted) Navigator.pushReplacementNamed(context, '/home');
+      if (mounted) {
+        final onboarding = context.read<OnboardingProvider>();
+        if (!onboarding.completed) {
+          Navigator.pushReplacementNamed(context, '/onboarding');
+        } else {
+          Navigator.pushReplacementNamed(context, '/home');
+        }
+      }
     } catch (e) {
       setState(() => _error = 'Email hoặc mật khẩu không đúng');
     } finally {

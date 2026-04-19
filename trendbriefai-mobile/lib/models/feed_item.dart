@@ -11,6 +11,8 @@ class FeedItem {
   bool isBookmarked;
   final String createdAt;
   final int readingTimeSec;
+  final String? thumbnailUrl;
+  final bool isTrending;
 
   FeedItem({
     required this.id,
@@ -25,6 +27,8 @@ class FeedItem {
     required this.isBookmarked,
     required this.createdAt,
     required this.readingTimeSec,
+    this.thumbnailUrl,
+    this.isTrending = false,
   });
 
   factory FeedItem.fromJson(Map<String, dynamic> json) {
@@ -41,6 +45,8 @@ class FeedItem {
       isBookmarked: json['isBookmarked'] as bool? ?? false,
       createdAt: json['createdAt'] as String? ?? '',
       readingTimeSec: json['readingTimeSec'] as int? ?? 30,
+      thumbnailUrl: json['thumbnailUrl'] as String?,
+      isTrending: json['isTrending'] as bool? ?? false,
     );
   }
 
@@ -58,6 +64,8 @@ class FeedItem {
       'isBookmarked': isBookmarked,
       'createdAt': createdAt,
       'readingTimeSec': readingTimeSec,
+      'thumbnailUrl': thumbnailUrl,
+      'isTrending': isTrending,
     };
   }
 }

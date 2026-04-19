@@ -1,55 +1,39 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../models/user_stats.dart';
+import '../providers/theme_provider.dart';
+import '../services/api_service.dart';
 import '../services/auth_service.dart';
+import 'reading_history_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
-
   @override
   State<ProfileScreen> createState() => _ProfileScreenState();
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  static const _allTopics = [
-    {'key': 'ai', 'label': 'AI'},
-    {'key': 'finance', 'label': 'Tài chính'},
-    {'key': 'lifestyle', 'label': 'Đời sống'},
-    {'key': 'drama', 'label': 'Drama'},
-  ];
-
-  late Set<String> _selected;
-  bool _saving = false;
+  final _api = ApiService();
+  UserStats? _stats;
+  bool _notificationsEnabled = true;
 
   @override
   void initState() {
     super.initState();
-    final auth = context.read<AuthService>();
-    _selected = Set<String>.from(auth.profile?.interests ?? []);
+    _loadStats();
   }
 
-  Future<void> _saveInterests() async {
-    setState(() => _saving = true);
+  Future<void> _loadStats() async {
     try {
-      await context.read<AuthService>().updateInterests(_selected.toList());
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Đã cập nhật sở thích')),
-        );
-      }
-    } catch (_) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Lỗi khi cập nhật')),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _saving = false);
-    }
+      final data = await _api.getUserStats();
+      if (mounted) setState(() => _stats = UserStats.fromJson(data));
+    } catch (_) {}
   }
 
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthService>();
+    final themeProvider = context.watch<ThemeProvider>();
     final profile = auth.profile;
     final theme = Theme.of(context);
 
@@ -59,89 +43,70 @@ class _ProfileScreenState extends State<ProfileScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Avatar + email
-          Center(
-            child: Column(
-              children: [
-                CircleAvatar(
-                  radius: 40,
-                  backgroundColor: theme.colorScheme.primaryContainer,
-                  child: Text(
-                    (profile?.email.isNotEmpty == true)
-                        ? profile!.email[0].toUpperCase()
-                        : '?',
-                    style: TextStyle(
-                      fontSize: 32,
-                      color: theme.colorScheme.onPrimaryContainer,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Text(profile?.email ?? '',
-                    style: theme.textTheme.titleMedium),
-                const SizedBox(height: 4),
-                Text(
-                  'Tham gia: ${profile?.createdAt.split('T').first ?? ''}',
-                  style: theme.textTheme.bodySmall
-                      ?.copyWith(color: Colors.grey[600]),
-                ),
-              ],
+          Center(child: Column(children: [
+            CircleAvatar(
+              radius: 40,
+              backgroundColor: theme.colorScheme.primaryContainer,
+              child: Text(
+                (profile?.email.isNotEmpty == true) ? profile!.email[0].toUpperCase() : '?',
+                style: TextStyle(fontSize: 32, color: theme.colorScheme.onPrimaryContainer),
+              ),
             ),
-          ),
-          const SizedBox(height: 32),
-          Text('Chủ đề quan tâm',
-              style: theme.textTheme.titleMedium
-                  ?.copyWith(fontWeight: FontWeight.bold)),
-          const SizedBox(height: 8),
-          Text('Chọn chủ đề để cá nhân hóa bảng tin của bạn',
-              style: theme.textTheme.bodyMedium
-                  ?.copyWith(color: Colors.grey[600])),
-          const SizedBox(height: 16),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: _allTopics.map((t) {
-              final key = t['key']!;
-              final isSelected = _selected.contains(key);
-              return FilterChip(
-                label: Text(t['label']!),
-                selected: isSelected,
-                onSelected: (selected) {
-                  setState(() {
-                    if (selected) {
-                      _selected.add(key);
-                    } else {
-                      _selected.remove(key);
-                    }
-                  });
-                },
-                selectedColor: theme.colorScheme.primaryContainer,
-              );
-            }).toList(),
-          ),
+            const SizedBox(height: 12),
+            Text(profile?.email ?? '', style: theme.textTheme.titleMedium),
+          ])),
           const SizedBox(height: 24),
-          SizedBox(
-            width: double.infinity,
-            child: FilledButton(
-              onPressed: _saving ? null : _saveInterests,
-              child: _saving
-                  ? const SizedBox(
-                      height: 20,
-                      width: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2))
-                  : const Text('Lưu sở thích'),
-            ),
+
+          // Stats
+          if (_stats != null) ...[
+            Row(mainAxisAlignment: MainAxisAlignment.spaceEvenly, children: [
+              _StatCard(label: 'Đã đọc', value: '${_stats!.totalArticlesRead}', icon: Icons.article),
+              _StatCard(label: 'Bookmark', value: '${_stats!.totalBookmarks}', icon: Icons.bookmark),
+              _StatCard(label: 'Ngày hoạt động', value: '${_stats!.daysActive}', icon: Icons.calendar_today),
+            ]),
+            const SizedBox(height: 24),
+          ],
+
+          // Menu items
+          ListTile(
+            leading: const Icon(Icons.history),
+            title: const Text('Lịch sử đọc'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ReadingHistoryScreen())),
           ),
-          const SizedBox(height: 32),
           const Divider(),
+
+          // Settings
+          Text('Cài đặt', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+          const SizedBox(height: 8),
+          SwitchListTile(
+            title: const Text('Chế độ tối'),
+            secondary: const Icon(Icons.dark_mode),
+            value: themeProvider.isDark,
+            onChanged: (_) => themeProvider.toggle(),
+          ),
+          SwitchListTile(
+            title: const Text('Thông báo'),
+            secondary: const Icon(Icons.notifications),
+            value: _notificationsEnabled,
+            onChanged: (v) async {
+              setState(() => _notificationsEnabled = v);
+              await _api.updateSettings({'notifications_enabled': v});
+            },
+          ),
+          const Divider(),
+
+          // App version
+          Center(child: Text('TrendBrief AI v1.0.0', style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey))),
           const SizedBox(height: 16),
+
+          // Logout
           SizedBox(
             width: double.infinity,
             child: OutlinedButton.icon(
               onPressed: () async {
                 await auth.logout();
-                if (context.mounted) {
-                  Navigator.pushReplacementNamed(context, '/login');
-                }
+                if (context.mounted) Navigator.pushReplacementNamed(context, '/login');
               },
               icon: const Icon(Icons.logout),
               label: const Text('Đăng xuất'),
@@ -151,5 +116,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ],
       ),
     );
+  }
+}
+
+class _StatCard extends StatelessWidget {
+  final String label;
+  final String value;
+  final IconData icon;
+
+  const _StatCard({required this.label, required this.value, required this.icon});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Column(children: [
+      Icon(icon, color: theme.colorScheme.primary),
+      const SizedBox(height: 4),
+      Text(value, style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
+      Text(label, style: theme.textTheme.bodySmall),
+    ]);
   }
 }

@@ -57,12 +57,15 @@ TrendBrief AI là ứng dụng giúp người trẻ Việt Nam (Gen Z, 18–30) 
 - `Bookmark` — user_id, article_id (unique compound)
 - `Interaction` — user_id, article_id, action (view/click_original/share/bookmark)
 
-Topics: `ai`, `finance`, `lifestyle`, `drama`, `career`, `insight`
+Topics: `ai`, `finance`, `lifestyle`, `drama`, `technology`, `career`, `health`, `entertainment`
 - `RssSource` — name, url, category, source_type (rss/html_scrape/api), is_active, crawl_interval_minutes, last_crawled_at, scrape_link_selector, scrape_content_selector
 - `Ad` — title, description, image_url, target_url, advertiser, topic, status, start/end_date, impressions, clicks, budget_cents, spent_cents
 - `AffiliateLink` — title, url, topic, commission, provider, is_active, clicks, impressions, conversions
 - `Analytics` — date, total_views, unique_users, total_clicks, total_shares, total_bookmarks, ad_impressions, ad_clicks, affiliate_clicks, affiliate_impressions
 - `UserActivity` — user_id, date, sessions, articles_viewed, first_seen_at, last_seen_at
+- `DeviceToken` — user_id, token (unique), platform (ios/android)
+- `NotificationLog` — user_id, article_id, type (trending/topic_update/weekly_digest), sent_at
+- `Topic` — key (unique), label, icon, color, order, is_active
 
 **API Routes:**
 
@@ -81,6 +84,11 @@ Topics: `ai`, `finance`, `lifestyle`, `drama`, `career`, `insight`
 | `POST /api/interactions` | Track hành vi user |
 | `GET /api/topics` | Danh sách chủ đề |
 | `PUT /api/users/interests` | Cập nhật sở thích |
+| `GET /api/users/me` | Thông tin user profile |
+| `GET /api/users/me/stats` | User engagement statistics |
+| `GET /api/users/me/history` | Reading history |
+| `POST /api/users/me/onboarding` | Complete onboarding |
+| `PUT /api/users/me/settings` | Theme & notification preferences |
 | `GET /api/ads` | Danh sách quảng cáo (admin) |
 | `POST /api/ads` | Tạo quảng cáo (admin) |
 | `PUT /api/ads/:id` | Cập nhật quảng cáo (admin) |
@@ -105,14 +113,16 @@ Topics: `ai`, `finance`, `lifestyle`, `drama`, `career`, `insight`
 | Embedding | sentence-transformers (all-MiniLM-L6-v2, 384-dim) — free, local |
 | Crawler | feedparser + newspaper3k + httpx (HTML scrape) |
 | Cleaner | BeautifulSoup4 |
-| Classifier | Keyword-based (Vietnamese + English), 6 topics |
+| Classifier | Keyword-based (Vietnamese + English), 8 topics |
 | Dedup | 3-layer: URL hash + Title similarity + Embedding cosine |
+| Quality Scorer | Weighted signal scoring (length, structure, Vietnamese ratio, spam) — pre-summarization gate |
+| Scraper | HTML listing page crawler (httpx + BeautifulSoup) cho nguồn không có RSS (Spiderum, TopDev) |
 
 **AI Pipeline:**
 ```
 Source (RSS/HTML) → feedparser or httpx+BeautifulSoup → newspaper3k → BeautifulSoup clean
 → Ollama summarize (title_ai + 3 bullets + reason)
-→ Keyword classify (ai/finance/lifestyle/drama/career/insight)
+→ Keyword classify (ai/finance/lifestyle/drama/technology/career/health/entertainment)
 → 3-layer dedup (URL hash → title ≥0.8 → embedding ≥0.8)
 → MongoDB store
 ```
@@ -150,7 +160,7 @@ Tone: trẻ, dễ hiểu
 - Login / Register — form validation, JWT storage
 - Feed — article cards, topic filter tabs, search bar, trending section, infinite scroll, bookmark toggle, share button, reading time, native ads, affiliate links
 - Bookmarks — saved articles, remove
-- Profile — interest selection (AI, Finance, Lifestyle, Drama, Career, Insight)
+- Profile — interest selection (AI, Finance, Lifestyle, Drama, Technology, Career, Health, Entertainment)
 
 ### 4. trendbriefai-mobile (Flutter App)
 
@@ -162,17 +172,23 @@ Tone: trẻ, dễ hiểu
 | Storage | flutter_secure_storage |
 
 **Screens:**
-- Login / Register
+- Login — đăng nhập
+- Register — đăng ký tài khoản
+- Onboarding — chọn chủ đề quan tâm lần đầu
+- Home — bottom navigation, điều hướng chính
 - Feed — card UI, topic chips, pull-to-refresh, infinite scroll, share button, reading time
-- Bookmarks — swipe-to-dismiss
-- Profile — interest chips, logout
+- Article Detail — chi tiết bài viết, bookmark, share
+- Search — tìm kiếm bài viết
+- Bookmarks — swipe-to-dismiss, danh sách đã lưu
+- Reading History — lịch sử bài đã đọc
+- Profile — interest chips, cài đặt, logout
 
 ## Database Schema (MongoDB)
 
 ```
 users {
   _id, email (unique), password_hash,
-  interests[] (ai/finance/lifestyle/drama/career/insight),
+  interests[] (ai/finance/lifestyle/drama/technology/career/health/entertainment),
   created_at, updated_at
 }
 
@@ -180,7 +196,7 @@ articles {
   _id, url (unique), url_hash (unique, MD5),
   title_original, title_ai, summary_bullets[3],
   reason, content_clean,
-  topic (ai/finance/lifestyle/drama/career/insight),
+  topic (ai/finance/lifestyle/drama/technology/career/health/entertainment),
   source, published_at, embedding[384],
   cluster_id, processing_status (pending/processing/done/failed/fallback),
   is_sponsored, sponsor_name, sponsor_url,
@@ -246,6 +262,26 @@ user_activities {
   UNIQUE(user_id, date)
 }
 Index: date, user_id + created_at
+
+device_tokens {
+  _id, user_id, token (unique),
+  platform (ios/android),
+  created_at, updated_at
+}
+Index: user_id, token (unique)
+
+notification_logs {
+  _id, user_id, article_id,
+  type (trending/topic_update/weekly_digest),
+  sent_at
+}
+Index: user_id + sent_at DESC, user_id + sent_at ASC
+
+topics {
+  _id, key (unique), label, icon, color,
+  order, is_active, created_at
+}
+Index: key (unique), order, is_active
 ```
 
 ## Content Sources (12 nguồn Việt Nam)

@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'feed_screen.dart';
 import 'bookmarks_screen.dart';
 import 'profile_screen.dart';
+import 'search_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
-
   @override
   State<HomeScreen> createState() => _HomeScreenState();
 }
@@ -27,10 +27,20 @@ class _HomeScreenState extends State<HomeScreen> {
       appBar: AppBar(
         title: Text(_titles[_currentIndex]),
         centerTitle: true,
+        actions: [
+          if (_currentIndex == 0)
+            IconButton(
+              icon: const Icon(Icons.search),
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const SearchScreen()),
+              ),
+            ),
+        ],
       ),
-      body: IndexedStack(
-        index: _currentIndex,
-        children: _screens,
+      body: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 250),
+        child: _screens[_currentIndex],
       ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _currentIndex,

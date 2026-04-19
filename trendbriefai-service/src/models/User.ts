@@ -1,10 +1,16 @@
 import mongoose, { Schema, Document } from 'mongoose';
-import { Topic } from '../types/api.types';
+
+export interface IUserSettings {
+  theme: 'light' | 'dark' | 'system';
+}
 
 export interface IUser extends Document {
   email: string;
   password_hash: string;
-  interests: Topic[];
+  interests: string[];
+  onboarding_completed: boolean;
+  notifications_enabled: boolean;
+  settings: IUserSettings;
   created_at: Date;
   updated_at: Date;
 }
@@ -24,8 +30,22 @@ const UserSchema = new Schema<IUser>(
     },
     interests: {
       type: [String],
-      enum: ['ai', 'finance', 'lifestyle', 'drama'],
       default: [],
+    },
+    onboarding_completed: {
+      type: Boolean,
+      default: false,
+    },
+    notifications_enabled: {
+      type: Boolean,
+      default: true,
+    },
+    settings: {
+      theme: {
+        type: String,
+        enum: ['light', 'dark', 'system'],
+        default: 'system',
+      },
     },
   },
   {

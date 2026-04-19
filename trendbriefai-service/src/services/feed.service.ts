@@ -169,6 +169,8 @@ export async function getFeed(
       readingTimeSec: estimateReadingTimeSec(a),
       isSponsored: a.is_sponsored ?? false,
       affiliateLinks: topicLinks.slice(0, 2),
+      thumbnailUrl: (a as any).thumbnailUrl ?? undefined,
+      isTrending: false,
     };
   });
 

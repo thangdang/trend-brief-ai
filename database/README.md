@@ -13,6 +13,9 @@ mongosh trendbriefai database/001_init_collections.js
 
 # 2. Seed RSS sources (6 Vietnamese news sources)
 mongosh trendbriefai database/002_seed_rss_sources.js
+
+# 3. Seed topic categories (8 topics)
+mongosh trendbriefai database/003_seed_topics.js
 ```
 
 ## Collections
@@ -25,6 +28,9 @@ mongosh trendbriefai database/002_seed_rss_sources.js
 | bookmarks      | User bookmarks (unique per user+article)     |
 | interactions   | User actions: view, click, share, bookmark   |
 | rss_sources    | RSS feed configurations for crawling         |
+| device_tokens  | Push notification device tokens (FCM)        |
+| notification_logs | Notification delivery history             |
+| topics         | Dynamic topic categories (seeded)            |
 
 ## Indexes
 
@@ -42,7 +48,7 @@ mongosh trendbriefai database/002_seed_rss_sources.js
 
 All collections use JSON Schema validation:
 
-- `articles.topic` only accepts: `ai`, `finance`, `lifestyle`, `drama`
+- `articles.topic` only accepts: `ai`, `finance`, `lifestyle`, `drama`, `technology`, `career`, `health`, `entertainment`
 - `articles.summary_bullets` must be exactly 3 strings
 - `articles.processing_status` only accepts: `pending`, `processing`, `done`, `failed`, `fallback`
 - `interactions.action` only accepts: `view`, `click_original`, `share`, `bookmark`

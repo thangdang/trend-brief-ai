@@ -15,6 +15,7 @@ import trendingRoutes from './routes/trending.routes';
 import adRoutes from './routes/ad.routes';
 import affiliateRoutes from './routes/affiliate.routes';
 import analyticsRoutes from './routes/analytics.routes';
+import notificationRoutes from './routes/notification.routes';
 import { startCrawlScheduler } from './workers/crawl.worker';
 
 const app = express();
@@ -41,6 +42,7 @@ app.use('/api/trending', trendingRoutes);
 app.use('/api/ads', adRoutes);
 app.use('/api/affiliates', affiliateRoutes);
 app.use('/api/analytics', analyticsRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 async function start() {
   await connectDatabase();

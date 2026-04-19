@@ -17,6 +17,9 @@ function mapArticleToFeedItem(a: IArticle, bookmarkedIds: Set<string>): FeedItem
     isBookmarked: bookmarkedIds.has(a._id.toString()),
     createdAt: a.created_at.toISOString(),
     readingTimeSec: estimateReadingTimeSec(a),
+    isSponsored: false,
+    thumbnailUrl: undefined,
+    isTrending: false,
   };
 }
 

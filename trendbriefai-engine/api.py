@@ -4,6 +4,7 @@ import logging
 from contextlib import asynccontextmanager
 from datetime import datetime
 
+import ollama
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
@@ -61,21 +62,73 @@ class DedupCheckResponse(BaseModel):
     cluster_id: str | None = None
 
 
+class HealthResponse(BaseModel):
+    status: str
+    service: str = "ai-service"
+    models: dict[str, str]
+    cache: dict[str, str]
+    faiss_index_size: int
+
+
 # ---------------------------------------------------------------------------
-# App lifecycle
+# App lifecycle with model warm-up
 # ---------------------------------------------------------------------------
+
+async def _ping_ollama() -> bool:
+    """Verify Ollama connectivity with a test prompt."""
+    import asyncio
+    try:
+        response = await asyncio.to_thread(
+            ollama.chat,
+            model=settings.summarizer_model,
+            messages=[{"role": "user", "content": "ping"}],
+            options={"num_predict": 1},
+        )
+        return True
+    except Exception:
+        return False
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Startup / shutdown lifecycle."""
+    """Enhanced startup: DB + model warm-up."""
     await connect_db()
+
+    model_status = {"sentence_transformer": "loading", "ollama": "checking"}
+
+    # Warm sentence-transformer
+    try:
+        from services.dedup.embedding import _get_model
+        _get_model()  # Force load
+        model_status["sentence_transformer"] = "ready"
+        logger.info("Sentence-transformer model loaded successfully")
+    except Exception:
+        logger.error("Failed to load sentence-transformer — falling back to lazy loading")
+        model_status["sentence_transformer"] = "fallback"
+
+    # Warm Ollama
+    try:
+        if await _ping_ollama():
+            model_status["ollama"] = "ready"
+            logger.info("Ollama connectivity verified")
+        else:
+            model_status["ollama"] = "fallback"
+            logger.warning("Ollama unreachable — summarizer in fallback-only mode")
+    except Exception:
+        model_status["ollama"] = "fallback"
+        logger.warning("Ollama unreachable — summarizer in fallback-only mode")
+
+    app.state.model_status = model_status
+    app.state.faiss_index_size = 0
+    app.state.lru_cache_size = 0
+
     yield
     await close_db()
 
 
 app = FastAPI(
     title="TrendBrief AI Service",
-    version="0.1.0",
+    version="0.2.0",
     lifespan=lifespan,
 )
 
@@ -84,9 +137,27 @@ app = FastAPI(
 # Endpoints
 # ---------------------------------------------------------------------------
 
-@app.get("/health")
+@app.get("/health", response_model=HealthResponse)
 async def health():
-    return {"status": "ok", "service": "ai-service"}
+    """Enhanced health endpoint with model readiness info."""
+    model_status = getattr(app.state, "model_status", {
+        "sentence_transformer": "unknown",
+        "ollama": "unknown",
+    })
+
+    # Determine overall status
+    all_ready = all(v == "ready" for v in model_status.values())
+    status = "ok" if all_ready else "degraded"
+
+    faiss_size = getattr(app.state, "faiss_index_size", 0)
+    lru_size = getattr(app.state, "lru_cache_size", 0)
+
+    return HealthResponse(
+        status=status,
+        models=model_status,
+        cache={"lru_size": str(lru_size), "redis": "unknown"},
+        faiss_index_size=faiss_size,
+    )
 
 
 @app.post("/crawl", response_model=CrawlResponse)

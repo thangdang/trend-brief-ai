@@ -2,6 +2,7 @@
 
 Uses newspaper3k for primary extraction and BeautifulSoup as a fallback
 cleaner to strip residual HTML, ads, and navigation elements.
+Includes Vietnamese-specific artifact removal and NFC normalization.
 """
 
 import asyncio
@@ -32,6 +33,46 @@ _AD_NAV_PATTERNS = re.compile(
 # Collapse multiple whitespace / blank lines into a single space.
 _MULTI_WS = re.compile(r"[ \t]+")
 _MULTI_NL = re.compile(r"\n{3,}")
+
+# Vietnamese-specific artifact patterns
+VN_ARTIFACTS: list[re.Pattern] = [
+    re.compile(r"(Đọc thêm|Xem thêm|Tin liên quan|Bài liên quan)\s*:.*", re.IGNORECASE),
+    re.compile(r"(Nguồn|Theo)\s*:.*$", re.MULTILINE | re.IGNORECASE),
+    re.compile(r"©.*$", re.MULTILINE),
+    re.compile(r"Chia sẻ\s*(Facebook|Twitter|Zalo|LinkedIn|Email).*$", re.MULTILINE | re.IGNORECASE),
+    re.compile(r"(Quảng cáo|Advertisement|Sponsored|Tài trợ).*$", re.MULTILINE | re.IGNORECASE),
+    re.compile(r"(Gửi bình luận|Bình luận|Comment).*$", re.MULTILINE | re.IGNORECASE),
+    re.compile(r"(Chia sẻ bài viết|Share this|Chia sẻ qua).*$", re.MULTILINE | re.IGNORECASE),
+]
+
+
+def _remove_repeated_paragraphs(text: str) -> str:
+    """Detect and remove repeated paragraphs."""
+    paragraphs = text.split("\n\n")
+    seen: set[str] = set()
+    unique: list[str] = []
+    for p in paragraphs:
+        normalized = p.strip()
+        if not normalized:
+            continue
+        if normalized in seen:
+            continue
+        seen.add(normalized)
+        unique.append(p)
+    return "\n\n".join(unique)
+
+
+def clean_vietnamese_artifacts(text: str) -> str:
+    """Strip Vietnamese web artifacts, boilerplate, repeated paragraphs."""
+    if not text:
+        return ""
+
+    for pattern in VN_ARTIFACTS:
+        text = pattern.sub("", text)
+
+    text = _remove_repeated_paragraphs(text)
+
+    return text.strip()
 
 
 def clean_html(raw_html: str) -> str:
@@ -70,7 +111,10 @@ def clean_html(raw_html: str) -> str:
     text = _MULTI_WS.sub(" ", text)
     text = _MULTI_NL.sub("\n\n", text)
 
-    # 5. Normalise Vietnamese unicode diacritics to NFC form.
+    # 5. Remove Vietnamese-specific artifacts.
+    text = clean_vietnamese_artifacts(text)
+
+    # 6. Normalise Vietnamese unicode diacritics to NFC form.
     text = unicodedata.normalize("NFC", text)
 
     return text.strip()

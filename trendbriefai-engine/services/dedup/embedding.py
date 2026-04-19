@@ -20,3 +20,18 @@ def encode_text(text: str) -> list[float]:
     model = _get_model()
     embedding = model.encode(text, normalize_embeddings=True)
     return embedding.tolist()
+
+
+def encode_texts_batch(texts: list[str], max_chars: int = 4000) -> list[list[float]]:
+    """Batch encode multiple texts into 384-dim normalized vectors.
+
+    Single model.encode() call for the entire batch.
+    Each text truncated to max_chars before encoding.
+    """
+    if not texts:
+        return []
+
+    model = _get_model()
+    truncated = [t[:max_chars] for t in texts]
+    embeddings = model.encode(truncated, normalize_embeddings=True)
+    return [e.tolist() for e in embeddings]

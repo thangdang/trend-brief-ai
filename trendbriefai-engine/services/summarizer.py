@@ -1,7 +1,8 @@
-"""AI summarization service with extractive fallback."""
+"""AI summarization service with extractive fallback and batch processing."""
 
 import asyncio
 import logging
+import math
 import re
 
 import ollama
@@ -114,7 +115,11 @@ def _parse_ai_response(raw: str) -> dict | None:
 # ---------------------------------------------------------------------------
 
 
-async def generate_summary(clean_text: str, model_name: str | None = None) -> dict:
+async def generate_summary(
+    clean_text: str,
+    model_name: str | None = None,
+    cache=None,
+) -> dict:
     """Generate an AI title, 3 bullets, and a reason from article text.
 
     Parameters
@@ -124,6 +129,9 @@ async def generate_summary(clean_text: str, model_name: str | None = None) -> di
         before being sent to the model.
     model_name:
         Ollama model to use.  Defaults to ``settings.summarizer_model``.
+    cache:
+        Optional SummarizerCache instance. When provided, checks cache
+        before calling Ollama and stores results after generation.
 
     Returns
     -------
@@ -131,8 +139,15 @@ async def generate_summary(clean_text: str, model_name: str | None = None) -> di
         ``{"title_ai": str, "summary_bullets": list[str], "reason": str}``
         Always contains exactly 3 bullets.  Falls back to extractive
         summarization when the AI model is unreachable or returns
-        unparseable output.
+        unparseable output. Includes ``from_cache`` flag when cache is used.
     """
+    # Check cache first
+    if cache is not None:
+        cached = await cache.get(clean_text)
+        if cached is not None:
+            logger.info("Summary served from cache")
+            return cached
+
     model = model_name or settings.summarizer_model
     truncated = clean_text[: settings.max_article_chars]
 
@@ -154,6 +169,9 @@ async def generate_summary(clean_text: str, model_name: str | None = None) -> di
 
         if parsed is not None:
             logger.info("AI summary generated successfully via model '%s'", model)
+            # Store in cache
+            if cache is not None:
+                await cache.put(clean_text, parsed)
             return parsed
 
         logger.warning(
@@ -166,4 +184,114 @@ async def generate_summary(clean_text: str, model_name: str | None = None) -> di
             "Ollama model '%s' failed — falling back to extractive summary", model
         )
 
-    return _extractive_fallback(truncated)
+    result = _extractive_fallback(truncated)
+    if cache is not None:
+        await cache.put(clean_text, result)
+    return result
+
+
+# ---------------------------------------------------------------------------
+# Batch processing
+# ---------------------------------------------------------------------------
+
+_BATCH_PROMPT_TEMPLATE = """\
+Tóm tắt {count} bài viết sau. Mỗi bài viết được đánh dấu bằng [ARTICLE {n}].
+Trả lời theo format cho MỖI bài:
+
+[ARTICLE {n}]
+TITLE: <tiêu đề ngắn <=12 từ>
+- bullet 1
+- bullet 2
+- bullet 3
+REASON: <vì sao nên quan tâm>
+
+Tone: trẻ, dễ hiểu
+
+{articles}
+"""
+
+
+def _build_batch_prompt(texts: list[str]) -> str:
+    """Build a single prompt containing multiple articles."""
+    articles_text = ""
+    for i, text in enumerate(texts, 1):
+        truncated = text[: settings.max_article_chars]
+        articles_text += f"\n[ARTICLE {i}]\n{truncated}\n"
+    return _BATCH_PROMPT_TEMPLATE.format(
+        count=len(texts), n="N", articles=articles_text
+    )
+
+
+def _parse_batch_response(raw: str, count: int) -> list[dict | None]:
+    """Parse batch AI response into individual article results."""
+    results: list[dict | None] = [None] * count
+
+    # Split by article markers
+    sections = re.split(r"\[ARTICLE\s+(\d+)\]", raw)
+
+    # sections alternates: [preamble, "1", content1, "2", content2, ...]
+    for i in range(1, len(sections) - 1, 2):
+        try:
+            idx = int(sections[i]) - 1
+            if 0 <= idx < count:
+                parsed = _parse_ai_response(sections[i + 1])
+                results[idx] = parsed
+        except (ValueError, IndexError):
+            continue
+
+    return results
+
+
+async def generate_summary_batch(
+    texts: list[str],
+    batch_size: int | None = None,
+    model_name: str | None = None,
+) -> list[dict]:
+    """Process multiple articles in batches via Ollama.
+
+    Falls back to individual processing on batch failure.
+    Falls back to extractive for unparseable individual results.
+    """
+    if not texts:
+        return []
+
+    batch_size = batch_size or settings.summarizer_batch_size
+    model = model_name or settings.summarizer_model
+    results: list[dict] = [{}] * len(texts)
+    num_batches = math.ceil(len(texts) / batch_size)
+
+    for batch_idx in range(num_batches):
+        start = batch_idx * batch_size
+        end = min(start + batch_size, len(texts))
+        batch_texts = texts[start:end]
+
+        try:
+            prompt = _build_batch_prompt(batch_texts)
+            response = await asyncio.to_thread(
+                ollama.chat,
+                model=model,
+                messages=[
+                    {"role": "system", "content": _SYSTEM_PROMPT},
+                    {"role": "user", "content": prompt},
+                ],
+                options={"num_predict": 512 * len(batch_texts)},
+            )
+
+            raw_content: str = response["message"]["content"]
+            parsed_list = _parse_batch_response(raw_content, len(batch_texts))
+
+            for i, parsed in enumerate(parsed_list):
+                global_idx = start + i
+                if parsed is not None:
+                    results[global_idx] = parsed
+                else:
+                    # Individual fallback for unparseable items
+                    results[global_idx] = await generate_summary(batch_texts[i], model)
+
+        except Exception:
+            logger.exception("Batch %d failed — falling back to individual processing", batch_idx)
+            for i, text in enumerate(batch_texts):
+                global_idx = start + i
+                results[global_idx] = await generate_summary(text, model)
+
+    return results

@@ -25,7 +25,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
             _emailCtrl.text.trim(),
             _passwordCtrl.text,
           );
-      if (mounted) Navigator.pushReplacementNamed(context, '/home');
+      if (mounted) Navigator.pushReplacementNamed(context, '/onboarding');
     } catch (e) {
       setState(() => _error = 'Đăng ký thất bại. Email có thể đã tồn tại.');
     } finally {

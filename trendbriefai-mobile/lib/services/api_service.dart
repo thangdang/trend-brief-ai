@@ -173,4 +173,53 @@ class ApiService {
         await _dio.put('/users/interests', data: {'interests': topics});
     return UserProfile.fromJson(response.data);
   }
+
+  // --- Topics ---
+
+  Future<List<Map<String, dynamic>>> getTopics() async {
+    final response = await _dio.get('/topics');
+    return List<Map<String, dynamic>>.from(response.data);
+  }
+
+  // --- User Stats ---
+
+  Future<Map<String, dynamic>> getUserStats() async {
+    final response = await _dio.get('/users/me/stats');
+    return Map<String, dynamic>.from(response.data);
+  }
+
+  // --- Reading History ---
+
+  Future<FeedResponse> getReadingHistory({int page = 1}) async {
+    final response = await _dio.get('/users/me/history', queryParameters: {'page': page});
+    return FeedResponse.fromJson(response.data);
+  }
+
+  // --- Onboarding ---
+
+  Future<void> saveOnboarding(List<String> interests) async {
+    await _dio.post('/users/me/onboarding', data: {'interests': interests});
+  }
+
+  // --- Notifications ---
+
+  Future<void> registerDeviceToken(String token, String platform) async {
+    await _dio.post('/notifications/register', data: {'token': token, 'platform': platform});
+  }
+
+  Future<void> unregisterDeviceToken(String token) async {
+    await _dio.delete('/notifications/unregister', data: {'token': token});
+  }
+
+  // --- Settings ---
+
+  Future<void> updateSettings(Map<String, dynamic> settings) async {
+    await _dio.put('/users/me/settings', data: settings);
+  }
+
+  // --- Share tracking ---
+
+  Future<void> trackShare(String articleId) async {
+    await trackInteraction(articleId, 'share');
+  }
 }

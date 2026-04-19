@@ -5,7 +5,7 @@ import { Topic } from '../types/api.types';
 
 const router = Router();
 
-const VALID_TOPICS: Topic[] = ['ai', 'finance', 'lifestyle', 'drama'];
+const VALID_TOPICS: Topic[] = ['ai', 'finance', 'lifestyle', 'drama', 'career', 'insight', 'technology', 'health', 'entertainment'];
 
 router.get('/', authMiddleware, async (req: Request, res: Response) => {
   try {

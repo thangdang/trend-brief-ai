@@ -48,6 +48,8 @@ export async function getTrendingArticles(limit: number): Promise<FeedItem[]> {
       isBookmarked: false,
       createdAt: a.created_at.toISOString(),
       readingTimeSec: estimateReadingTimeSec(a),
+      isSponsored: false,
+      isTrending: true,
     });
   }
 

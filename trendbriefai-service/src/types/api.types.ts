@@ -1,4 +1,4 @@
-export type Topic = 'ai' | 'finance' | 'lifestyle' | 'drama' | 'career' | 'insight';
+export type Topic = 'ai' | 'finance' | 'lifestyle' | 'drama' | 'career' | 'insight' | 'technology' | 'health' | 'entertainment';
 
 export type InteractionAction = 'view' | 'click_original' | 'share' | 'bookmark';
 
@@ -55,6 +55,8 @@ export interface FeedItem {
   readingTimeSec: number;
   isSponsored: boolean;
   affiliateLinks?: AffiliateLink[];
+  thumbnailUrl?: string;
+  isTrending: boolean;
 }
 
 export type FeedEntry = FeedItem | AdItem;
