@@ -19,6 +19,7 @@ class ArticleDocument(ArticleBase):
     reason: str | None = None
     content_clean: str | None = None
     topic: str | None = None  # 'ai' | 'finance' | 'lifestyle' | 'drama'
+    image_url: str | None = None
     embedding: list[float] | None = None
     cluster_id: str | None = None
     processing_status: str = "pending"  # pending | processing | done | failed | fallback

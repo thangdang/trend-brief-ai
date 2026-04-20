@@ -123,6 +123,9 @@ db.articles.createIndex({ url: 1 }, { unique: true });
 db.articles.createIndex({ url_hash: 1 }, { unique: true });
 db.articles.createIndex({ source: 1 });
 db.articles.createIndex({ processing_status: 1 });
+// Compound index for feed query (processing_status + topic + created_at)
+db.articles.createIndex({ processing_status: 1, topic: 1, created_at: -1 });
+db.articles.createIndex({ processing_status: 1, created_at: -1 });
 
 // ─── 3. Clusters ───
 db.createCollection('clusters', {

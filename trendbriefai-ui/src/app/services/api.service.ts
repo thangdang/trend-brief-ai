@@ -69,6 +69,12 @@ export class ApiService {
     return this.http.get<{ items: FeedItem[] }>(`${this.apiUrl}/trending`, { params: httpParams });
   }
 
+  // History
+  getHistory(page: number = 1): Observable<FeedResponse> {
+    const httpParams = new HttpParams().set('page', page.toString());
+    return this.http.get<FeedResponse>(`${this.apiUrl}/history`, { params: httpParams });
+  }
+
   // Topics
   getTopics(): Observable<{ topics: Topic[] }> {
     return this.http.get<{ topics: Topic[] }>(`${this.apiUrl}/topics`);

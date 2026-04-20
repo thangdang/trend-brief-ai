@@ -1,0 +1,37 @@
+<div class="auth-wrapper">
+      <div class="auth-card">
+        <div class="auth-brand">🔥 TrendBrief AI</div>
+        <h2>Đăng nhập</h2>
+        <p class="auth-sub">Chào mừng bạn quay lại</p>
+
+        @if (error()) {
+          <div class="alert-error">{{ error() }}</div>
+        }
+
+        <form [formGroup]="form" (ngSubmit)="onSubmit()">
+          <div class="form-group">
+            <label for="email">Email</label>
+            <input id="email" type="email" formControlName="email" placeholder="you@example.com" />
+            @if (form.controls.email.touched && form.controls.email.errors) {
+              <span class="field-error">Email không hợp lệ</span>
+            }
+          </div>
+
+          <div class="form-group">
+            <label for="password">Mật khẩu</label>
+            <input id="password" type="password" formControlName="password" placeholder="••••••••" />
+            @if (form.controls.password.touched && form.controls.password.errors) {
+              <span class="field-error">Mật khẩu tối thiểu 6 ký tự</span>
+            }
+          </div>
+
+          <button type="submit" class="btn-primary" [disabled]="loading()">
+            @if (loading()) { Đang xử lý... } @else { Đăng nhập }
+          </button>
+        </form>
+
+        <p class="auth-footer">
+          Chưa có tài khoản? <a routerLink="/register">Đăng ký ngay</a>
+        </p>
+      </div>
+    </div>

@@ -1,0 +1,59 @@
+<a routerLink="/feed" class="back-link">← Quay lại bảng tin</a>
+
+@if (loading()) {
+  <div class="loading">Đang tải bài viết...</div>
+}
+
+@if (article(); as a) {
+  <article class="article-detail">
+    <div class="article-meta">
+      <span class="badge" [class]="'t-' + a.topic">{{ a.topic }}</span>
+      <span class="meta">{{ a.source }} · {{ a.publishedAt | date:'dd/MM/yyyy HH:mm' }}</span>
+      @if (a.wasTranslated) {
+        <span class="translated-badge">🌐 Dịch từ {{ a.sourceLang?.toUpperCase() }}</span>
+      }
+    </div>
+
+    <h1 class="article-title">{{ a.titleAi || a.titleOriginal }}</h1>
+
+    @if (a.imageUrl) {
+      <img [src]="a.imageUrl" [alt]="a.titleAi || a.titleOriginal" class="article-image" />
+    }
+
+    @if (a.titleAi && a.titleOriginal && a.titleAi !== a.titleOriginal) {
+      <p class="original-title">Tiêu đề gốc: {{ a.titleOriginal }}</p>
+    }
+
+    <!-- AI Summary -->
+    <div class="summary-box">
+      <h3>📋 Tóm tắt AI</h3>
+      <ul>
+        @for (b of a.summaryBullets; track $index) {
+          <li>{{ b }}</li>
+        }
+      </ul>
+      @if (a.reason) {
+        <p class="reason">💡 {{ a.reason }}</p>
+      }
+    </div>
+
+    <!-- Full content (if available) -->
+    @if (a.contentClean) {
+      <div class="full-content">
+        <h3>📰 Nội dung đầy đủ</h3>
+        <div class="content-text">{{ a.contentClean }}</div>
+      </div>
+    }
+
+    <div class="article-actions">
+      <a [href]="a.url" target="_blank" rel="noopener" class="btn-original">
+        Đọc bài gốc trên {{ a.source }} ↗
+      </a>
+      <button class="btn-share" (click)="share(a)">Chia sẻ ↗</button>
+    </div>
+  </article>
+}
+
+@if (!article() && !loading()) {
+  <div class="not-found">Không tìm thấy bài viết.</div>
+}

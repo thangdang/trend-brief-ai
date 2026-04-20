@@ -10,6 +10,7 @@ export interface IArticle extends Document {
   reason?: string;
   content_clean?: string;
   topic?: Topic;
+  image_url?: string;
   source: string;
   published_at?: Date;
   embedding?: number[];
@@ -53,6 +54,7 @@ const ArticleSchema = new Schema<IArticle>(
       type: String,
       enum: ['ai', 'finance', 'lifestyle', 'drama', 'career', 'insight'],
     },
+    image_url: String,
     source: {
       type: String,
       required: true,

@@ -1,5 +1,6 @@
 import express from 'express';
 import cors from 'cors';
+import compression from 'compression';
 import swaggerUi from 'swagger-ui-express';
 import { config } from './config';
 import { swaggerSpec } from './config/swagger';
@@ -18,12 +19,14 @@ import adRoutes from './routes/ad.routes';
 import affiliateRoutes from './routes/affiliate.routes';
 import analyticsRoutes from './routes/analytics.routes';
 import notificationRoutes from './routes/notification.routes';
+import publicRoutes from './routes/public.routes';
 import { startCrawlScheduler } from './workers/crawl.worker';
 
 const app = express();
 
 // Middleware
 app.use(cors());
+app.use(compression()); // gzip responses — ~60-70% smaller for JSON
 app.use(express.json());
 app.use(generalLimiter);
 
@@ -41,7 +44,10 @@ app.get('/api-docs.json', (_req, res) => {
   res.json(swaggerSpec);
 });
 
-// Routes
+// Public routes (no auth — for user website)
+app.use('/api/public', publicRoutes);
+
+// Routes (auth required — for admin + mobile app)
 app.use('/api/auth', authLimiter, authRoutes);
 app.use('/api/feed', feedRoutes);
 app.use('/api/bookmarks', bookmarkRoutes);

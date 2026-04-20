@@ -116,6 +116,30 @@ class FeedCard extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 10),
+            // Thumbnail image
+            if (item.thumbnailUrl != null && item.thumbnailUrl!.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: Image.network(
+                    item.thumbnailUrl!,
+                    width: double.infinity,
+                    height: 180,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                    loadingBuilder: (context, child, progress) {
+                      if (progress == null) return child;
+                      return Container(
+                        width: double.infinity,
+                        height: 180,
+                        color: Colors.grey[200],
+                        child: const Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                      );
+                    },
+                  ),
+                ),
+              ),
             // AI title
             Text(
               item.titleAi.isNotEmpty ? item.titleAi : item.titleOriginal,

@@ -1,0 +1,86 @@
+/* ═══════════════════════════════════════════════════════
+   TrendBrief AI — Public Website
+   Design: Professional, Modern, Asian-inspired
+   Colors: Deep navy + warm coral accent + clean whites
+   Typography: Inter (Latin) + system Vietnamese support
+   ═══════════════════════════════════════════════════════ */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+:root {
+  /* Primary palette — deep navy + warm coral (popular in VN/Asian fintech & news apps) */
+  --primary: #1a1a2e;
+  --primary-light: #16213e;
+  --accent: #e94560;
+  --accent-light: #ff6b6b;
+  --accent-soft: #fff0f0;
+
+  /* Neutral */
+  --bg: #f7f8fc;
+  --bg-card: #ffffff;
+  --bg-hover: #fafbff;
+  --border: #eef0f6;
+  --border-hover: #d4d8e8;
+
+  /* Text */
+  --text-primary: #1a1a2e;
+  --text-secondary: #5a607f;
+  --text-muted: #9ca3c0;
+  --text-inverse: #ffffff;
+
+  /* Topic colors — vibrant but not childish */
+  --topic-ai: #6c5ce7;
+  --topic-finance: #00b894;
+  --topic-lifestyle: #fdcb6e;
+  --topic-drama: #e17055;
+  --topic-technology: #0984e3;
+  --topic-career: #636e72;
+  --topic-health: #e84393;
+  --topic-entertainment: #f39c12;
+  --topic-sport: #00cec9;
+  --topic-insight: #55a3a4;
+
+  /* Spacing */
+  --radius: 12px;
+  --radius-sm: 8px;
+  --radius-pill: 50px;
+
+  /* Shadow — subtle, layered */
+  --shadow-sm: 0 1px 3px rgba(26,26,46,0.04);
+  --shadow-md: 0 4px 16px rgba(26,26,46,0.06);
+  --shadow-lg: 0 8px 32px rgba(26,26,46,0.08);
+  --shadow-hover: 0 8px 24px rgba(26,26,46,0.12);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+    'Noto Sans', 'Noto Sans CJK', sans-serif;
+  background: var(--bg);
+  color: var(--text-primary);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  line-height: 1.6;
+  font-size: 15px;
+}
+
+a { text-decoration: none; color: inherit; transition: color 0.2s; }
+
+::selection { background: rgba(233,69,96,0.15); color: var(--primary); }
+
+/* Scrollbar — thin, elegant */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #d4d8e8; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #9ca3c0; }
+
+/* Focus ring — accessible */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 4px;
+}

@@ -1,0 +1,42 @@
+<div class="profile-page">
+      <h1 class="page-title">Hồ sơ cá nhân</h1>
+
+      <div class="profile-card">
+        <div class="section">
+          <h3>Thông tin tài khoản</h3>
+          <div class="info-row">
+            <span class="info-label">Email</span>
+            <span class="info-value">{{ email() }}</span>
+          </div>
+        </div>
+
+        <div class="section">
+          <h3>Chủ đề quan tâm</h3>
+          <p class="section-desc">Chọn chủ đề bạn muốn theo dõi để cá nhân hóa bảng tin.</p>
+          <div class="topic-grid">
+            @for (opt of topicOptions; track opt.value) {
+              <label class="topic-checkbox" [class.checked]="isSelected(opt.value)">
+                <input
+                  type="checkbox"
+                  [checked]="isSelected(opt.value)"
+                  (change)="toggleTopic(opt.value)"
+                />
+                <span class="check-icon">@if (isSelected(opt.value)) { ✓ }</span>
+                <span>{{ opt.label }}</span>
+              </label>
+            }
+          </div>
+        </div>
+
+        @if (message()) {
+          <div class="alert-success">{{ message() }}</div>
+        }
+        @if (error()) {
+          <div class="alert-error">{{ error() }}</div>
+        }
+
+        <button class="btn-save" (click)="save()" [disabled]="saving()">
+          @if (saving()) { Đang lưu... } @else { Lưu thay đổi }
+        </button>
+      </div>
+    </div>

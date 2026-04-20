@@ -5,14 +5,7 @@ import { AuthService } from '../../services/auth.service';
 @Component({
   selector: 'app-header',
   standalone: true,
-  template: `
-    <header class="app-header">
-      <div class="header-title">TrendBrief AI</div>
-      <div class="header-actions">
-        <button class="btn-logout" (click)="logout()">Đăng xuất</button>
-      </div>
-    </header>
-  `,
+  templateUrl: './header.component.html',
 })
 export class HeaderComponent {
   private authService = inject(AuthService);

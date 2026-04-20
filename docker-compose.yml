@@ -96,7 +96,7 @@ services:
     networks:
       - trendbriefai
 
-  # ── Web UI (Angular) ───────────────────────────────
+  # ── Admin UI (Angular — requires login) ──────────
   trendbriefai-ui:
     build:
       context: ./trendbriefai-ui
@@ -107,6 +107,21 @@ services:
       - "4200:80"
     environment:
       API_URL: http://trendbriefai-service:3000/api
+    depends_on:
+      trendbriefai-service:
+        condition: service_healthy
+    networks:
+      - trendbriefai
+
+  # ── Public Website (Angular — no login required) ──
+  trendbriefai-web:
+    build:
+      context: ./trendbriefai-web
+      dockerfile: Dockerfile
+    container_name: trendbriefai-web
+    restart: unless-stopped
+    ports:
+      - "4201:80"
     depends_on:
       trendbriefai-service:
         condition: service_healthy

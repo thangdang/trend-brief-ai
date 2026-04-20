@@ -73,6 +73,7 @@ async def _process_single_article(
 
             clean_text = cleaned["text"]
             title = cleaned["title"] or entry.get("title", "")
+            image_url = cleaned.get("image_url") or entry.get("image_url")
 
             # Step 2b: Detect language + translate to Vietnamese if needed
             tr = await ensure_vietnamese(clean_text, title)
@@ -142,6 +143,7 @@ async def _process_single_article(
                 "topic": topic,
                 "source": entry.get("source", ""),
                 "published_at": entry.get("published_at") or cleaned.get("published_at"),
+                "image_url": image_url,
                 "embedding": dedup_result.get("embedding"),
                 "cluster_id": dedup_result.get("cluster_id"),
                 "processing_status": processing_status,

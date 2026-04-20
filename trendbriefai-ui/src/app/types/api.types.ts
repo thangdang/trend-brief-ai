@@ -1,4 +1,4 @@
-export type Topic = 'ai' | 'finance' | 'lifestyle' | 'drama';
+export type Topic = 'ai' | 'finance' | 'lifestyle' | 'drama' | 'technology' | 'career' | 'health' | 'entertainment' | 'sport' | 'insight';
 
 export type InteractionAction = 'view' | 'click_original' | 'share' | 'bookmark';
 

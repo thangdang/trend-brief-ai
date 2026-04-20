@@ -1,0 +1,61 @@
+@if (topic()) {
+  <h2 class="page-title">{{ topic()!.toUpperCase() }}</h2>
+}
+
+<!-- Trending (only on main feed, first load) -->
+@if (!topic() && !cursor() && trending().length > 0) {
+  <section class="trending">
+    <h2 class="section-title">🔥 Đang hot</h2>
+    <div class="trending-row">
+      @for (item of trending(); track item.id) {
+        <a [routerLink]="'/article/' + item.id" class="trending-card">
+          <span class="badge" [class]="'t-' + item.topic">{{ item.topic }}</span>
+          <h4>{{ item.titleAi }}</h4>
+          <span class="meta">{{ item.source }}</span>
+        </a>
+      }
+    </div>
+  </section>
+}
+
+<!-- Articles -->
+<div class="articles">
+  @for (item of items(); track item.id) {
+    <article class="card">
+      <div class="card-top">
+        <span class="badge" [class]="'t-' + item.topic">{{ item.topic }}</span>
+        <span class="meta">{{ item.source }} · {{ item.publishedAt | date:'dd/MM/yyyy HH:mm' }}</span>
+      </div>
+      @if (item.imageUrl) {
+        <img [src]="item.imageUrl" [alt]="item.titleAi || item.titleOriginal" class="card-image" loading="lazy" />
+      }
+      <a [routerLink]="'/article/' + item.id" class="card-title">{{ item.titleAi || item.titleOriginal }}</a>
+      <ul class="bullets">
+        @for (b of item.summaryBullets; track $index) {
+          <li>{{ b }}</li>
+        }
+      </ul>
+      @if (item.reason) {
+        <p class="reason">💡 {{ item.reason }}</p>
+      }
+      <div class="card-bottom">
+        <a [routerLink]="'/article/' + item.id" class="read-more">Đọc chi tiết →</a>
+        <a [href]="item.url" target="_blank" rel="noopener" class="original-link">Bài gốc ↗</a>
+      </div>
+    </article>
+  }
+</div>
+
+@if (loading()) {
+  <div class="loading">Đang tải...</div>
+}
+
+@if (items().length === 0 && !loading()) {
+  <div class="empty">Chưa có bài viết nào.</div>
+}
+
+@if (hasMore() && !loading()) {
+  <div class="load-more">
+    <button (click)="loadMore()">Tải thêm</button>
+  </div>
+}

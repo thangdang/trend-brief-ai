@@ -7,16 +7,6 @@ import { HeaderComponent } from './header/header.component';
   selector: 'app-layout',
   standalone: true,
   imports: [RouterOutlet, SidebarComponent, HeaderComponent],
-  template: `
-    <div class="app-layout">
-      <app-sidebar />
-      <div class="app-main">
-        <app-header />
-        <main class="app-content">
-          <router-outlet></router-outlet>
-        </main>
-      </div>
-    </div>
-  `,
+  templateUrl: './layout.component.html',
 })
 export class LayoutComponent {}

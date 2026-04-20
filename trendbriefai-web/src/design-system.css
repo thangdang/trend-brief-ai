@@ -1,0 +1,23 @@
+/* ═══════════════════════════════════════════════════════
+   Shared Design System — Professional Modern Asian
+   Apply to all UI repos via @import in styles.css
+   ═══════════════════════════════════════════════════════ */
+
+:root {
+  --primary: #1a1a2e;
+  --primary-light: #16213e;
+  --accent: #e94560;
+  --accent-light: #ff6b6b;
+  --accent-soft: #fff0f0;
+  --bg: #f7f8fc;
+  --bg-card: #ffffff;
+  --border: #eef0f6;
+  --text-primary: #1a1a2e;
+  --text-secondary: #5a607f;
+  --text-muted: #9ca3c0;
+  --radius: 12px;
+  --radius-sm: 8px;
+  --shadow-sm: 0 1px 3px rgba(26,26,46,0.04);
+  --shadow-md: 0 4px 16px rgba(26,26,46,0.06);
+  --shadow-hover: 0 8px 24px rgba(26,26,46,0.12);
+}

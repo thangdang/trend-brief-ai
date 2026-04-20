@@ -149,6 +149,7 @@ async def extract_article(url: str) -> dict | None:
         "title": (article.title or "").strip(),
         "text": (article.text or "").strip(),
         "published_at": article.publish_date,
+        "image_url": (article.top_image or "").strip() or None,
     }
 
 
@@ -191,4 +192,5 @@ async def extract_and_clean(url: str) -> dict | None:
         "title": unicodedata.normalize("NFC", result["title"]),
         "text": cleaned_text,
         "published_at": result["published_at"],
+        "image_url": result.get("image_url"),
     }

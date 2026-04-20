@@ -11,6 +11,33 @@ import feedparser
 logger = logging.getLogger(__name__)
 
 
+def _extract_rss_image(entry: feedparser.FeedParserDict) -> str | None:
+    """Extract thumbnail/image URL from an RSS entry.
+
+    Checks ``media_content``, ``media_thumbnail``, and ``enclosures``
+    for image URLs commonly provided by Vietnamese and international feeds.
+    """
+    # media:content (e.g. VnExpress, TuoiTre)
+    for media in getattr(entry, "media_content", []):
+        url = media.get("url", "")
+        if url and ("image" in media.get("type", "") or media.get("medium") == "image"):
+            return url
+
+    # media:thumbnail
+    for thumb in getattr(entry, "media_thumbnail", []):
+        url = thumb.get("url", "")
+        if url:
+            return url
+
+    # enclosures (standard RSS)
+    for enc in getattr(entry, "enclosures", []):
+        url = enc.get("href", "") or enc.get("url", "")
+        if url and "image" in enc.get("type", ""):
+            return url
+
+    return None
+
+
 def _parse_published_date(entry: feedparser.FeedParserDict) -> datetime | None:
     """Extract a datetime from an RSS entry's date fields.
 
@@ -100,6 +127,7 @@ async def crawl_rss_source(source_url: str, source_name: str) -> list[dict]:
                 "title": title,
                 "published_at": published_at,
                 "source": source_name,
+                "image_url": _extract_rss_image(item),
             }
         )
 

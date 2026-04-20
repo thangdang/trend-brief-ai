@@ -1,0 +1,47 @@
+<!-- Top navbar -->
+<nav class="navbar">
+  <div class="container">
+    <a class="brand" routerLink="/feed">⚡ TrendBrief</a>
+
+    <div class="search-box">
+      <input
+        type="text"
+        [(ngModel)]="searchQuery"
+        placeholder="Tìm kiếm tin tức..."
+        (keyup.enter)="doSearch()"
+      />
+      <button (click)="doSearch()">🔍</button>
+    </div>
+
+    <div class="nav-right">
+      <a routerLink="/feed" routerLinkActive="active" class="nav-link">Bảng tin</a>
+    </div>
+  </div>
+</nav>
+
+<!-- Topic bar -->
+<div class="topic-bar">
+  <div class="container">
+    <a class="topic-chip" routerLink="/feed" routerLinkActive="active" [routerLinkActiveOptions]="{exact:true}">Tất cả</a>
+    @for (t of topics(); track t.key) {
+      <a class="topic-chip" [routerLink]="'/topic/' + t.key" routerLinkActive="active">
+        {{ t.label }}
+      </a>
+    }
+  </div>
+</div>
+
+<!-- Content -->
+<main class="main-content">
+  <div class="container">
+    <router-outlet />
+  </div>
+</main>
+
+<!-- Footer -->
+<footer class="footer">
+  <div class="container">
+    <p>⚡ TrendBrief AI — Tin tức AI tóm tắt cho Gen Z Việt Nam</p>
+    <p class="footer-sub">Đọc nhanh 30–60 giây · Không cần đăng nhập · Miễn phí</p>
+  </div>
+</footer>

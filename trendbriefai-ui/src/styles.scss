@@ -1,4 +1,23 @@
-// TrendBrief AI — ArchitectUI-inspired global styles
+// TrendBrief AI — Asian-inspired professional design system
+
+:root {
+  --primary: #1a1a2e;
+  --primary-light: #16213e;
+  --primary-dark: #0f0f23;
+  --accent: #e94560;
+  --accent-hover: #d63d56;
+  --bg: #f7f8fc;
+  --bg-card: #ffffff;
+  --text-primary: #1a1a2e;
+  --text-secondary: #64748b;
+  --text-muted: #94a3b8;
+  --border-color: #e2e8f0;
+  --shadow: 0 1px 3px rgba(26, 26, 46, 0.04);
+  --shadow-md: 0 4px 12px rgba(26, 26, 46, 0.08);
+  --radius: 12px;
+  --radius-sm: 6px;
+  --sidebar-width: 260px;
+}
 
 * {
   margin: 0;
@@ -7,9 +26,9 @@
 }
 
 body {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  background: #f1f4f6;
-  color: #333;
+  font-family: 'Inter', 'Noto Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: var(--bg);
+  color: var(--text-primary);
   min-height: 100vh;
 }
 
@@ -18,11 +37,11 @@ a {
   color: inherit;
 }
 
-// ArchitectUI-inspired sidebar
+// Asian-inspired sidebar
 .app-sidebar {
-  width: 260px;
+  width: var(--sidebar-width);
   min-height: 100vh;
-  background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
+  background: linear-gradient(180deg, #1a1a2e 0%, #0f0f23 100%);
   color: #fff;
   position: fixed;
   left: 0;
@@ -38,7 +57,7 @@ a {
   font-size: 20px;
   font-weight: 700;
   color: #fff;
-  border-bottom: 1px solid #334155;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   display: flex;
   align-items: center;
   gap: 10px;
@@ -73,8 +92,8 @@ a {
 
   &.active {
     color: #fff;
-    background: rgba(99, 102, 241, 0.15);
-    border-left-color: #6366f1;
+    background: rgba(233, 69, 96, 0.15);
+    border-left-color: var(--accent);
   }
 }
 
@@ -84,15 +103,15 @@ a {
   font-size: 16px;
 }
 
-// ArchitectUI-inspired header
+// Header
 .app-header {
-  background: #fff;
+  background: var(--bg-card);
   height: 60px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 0 24px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  box-shadow: var(--shadow);
   position: sticky;
   top: 0;
   z-index: 50;
@@ -101,7 +120,7 @@ a {
 .app-header .header-title {
   font-size: 16px;
   font-weight: 600;
-  color: #1e293b;
+  color: var(--primary);
 }
 
 .app-header .header-actions {
@@ -148,8 +167,9 @@ a {
 // Utility classes
 .card {
   border: none;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
-  border-radius: 8px;
+  box-shadow: var(--shadow);
+  border-radius: var(--radius);
+  background: var(--bg-card);
 }
 
 .badge-topic {
@@ -159,8 +179,32 @@ a {
   font-weight: 600;
   text-transform: uppercase;
 
-  &.topic-ai { background: #ede9fe; color: #6d28d9; }
-  &.topic-finance { background: #dcfce7; color: #15803d; }
-  &.topic-lifestyle { background: #fef3c7; color: #b45309; }
-  &.topic-drama { background: #fce7f3; color: #be185d; }
+  &.topic-ai { background: #1a1a2e15; color: #1a1a2e; }
+  &.topic-finance { background: #0f766e15; color: #0f766e; }
+  &.topic-lifestyle { background: #e9456015; color: #e94560; }
+  &.topic-drama { background: #be185d15; color: #be185d; }
+  &.topic-technology { background: #16213e15; color: #16213e; }
+  &.topic-career { background: #0369a115; color: #0369a1; }
+  &.topic-health { background: #db277715; color: #db2777; }
+  &.topic-entertainment { background: #ea580c15; color: #ea580c; }
+  &.topic-sport { background: #05966915; color: #059669; }
+  &.topic-insight { background: #0284c715; color: #0284c7; }
+}
+
+// Mobile responsive
+@media (max-width: 768px) {
+  .app-sidebar {
+    transform: translateX(-100%);
+    transition: transform 0.3s ease;
+    &.open { transform: translateX(0); }
+  }
+  .app-main { margin-left: 0; }
+  .sidebar-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.4);
+    z-index: 99;
+    display: none;
+    &.show { display: block; }
+  }
 }

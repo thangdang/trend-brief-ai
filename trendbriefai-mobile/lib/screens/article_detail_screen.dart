@@ -133,6 +133,20 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
                         style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
                       ),
                       const SizedBox(height: 12),
+                      // Thumbnail image
+                      if (_item!.thumbnailUrl != null && _item!.thumbnailUrl!.isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(10),
+                            child: Image.network(
+                              _item!.thumbnailUrl!,
+                              width: double.infinity,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                            ),
+                          ),
+                        ),
                       // Date + reading time
                       Text(
                         '${formatRelativeTime(_item!.publishedAt)} · ⏱ ${_item!.readingTimeSec}s đọc',
