@@ -20,7 +20,13 @@ import affiliateRoutes from './routes/affiliate.routes';
 import analyticsRoutes from './routes/analytics.routes';
 import notificationRoutes from './routes/notification.routes';
 import publicRoutes from './routes/public.routes';
+import sourceRoutes from './routes/source.routes';
+import adminRoutes from './routes/admin.routes';
+import articleRoutes from './routes/article.routes';
+import referralRoutes from './routes/referral.routes';
+import reactionRoutes from './routes/reaction.routes';
 import { startCrawlScheduler } from './workers/crawl.worker';
+import { startNotificationScheduler } from './workers/notification.scheduler';
 
 const app = express();
 
@@ -60,10 +66,16 @@ app.use('/api/ads', adRoutes);
 app.use('/api/affiliates', affiliateRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/sources', sourceRoutes);
+app.use('/api/admin', adminRoutes);
+app.use('/api/articles', articleRoutes);
+app.use('/api/referral', referralRoutes);
+app.use('/api/reactions', reactionRoutes);
 
 async function start() {
   await connectDatabase();
   startCrawlScheduler();
+  startNotificationScheduler();
 
   app.listen(config.port, () => {
     console.log(`🚀 TrendBrief API running on port ${config.port}`);

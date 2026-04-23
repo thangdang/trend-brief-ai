@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { authMiddleware } from '../middleware/auth';
-import { registerToken, unregisterToken } from '../services/notification.service';
+import { registerToken, unregisterToken, getNotificationLogs, markNotificationOpened } from '../services/notification.service';
 
 const router = Router();
 
@@ -126,6 +126,28 @@ router.delete('/unregister', authMiddleware, async (req: Request, res: Response)
     res.json({ message: 'Device token unregistered' });
   } catch (err) {
     res.status(500).json({ error: 'Failed to unregister token' });
+  }
+});
+
+// GET /notifications/logs — user's notification history
+router.get('/logs', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const page = Math.max(parseInt(req.query.page as string, 10) || 1, 1);
+    const limit = Math.min(parseInt(req.query.limit as string, 10) || 20, 50);
+    const result = await getNotificationLogs(req.user!.id, page, limit);
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch notification logs' });
+  }
+});
+
+// POST /notifications/:logId/opened — mark notification as opened
+router.post('/:logId/opened', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    await markNotificationOpened(req.params.logId);
+    res.json({ message: 'Notification marked as opened' });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to mark notification opened' });
   }
 });
 

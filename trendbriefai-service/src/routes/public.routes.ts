@@ -143,8 +143,45 @@ router.get('/articles/:id', async (req: Request, res: Response) => {
       wasTranslated: article.was_translated,
       imageUrl: (article as any).image_url || null,
     });
+
+    // Note: Related articles are fetched separately via /api/public/articles/:id/related
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch article' });
+  }
+});
+
+// GET /api/public/articles/:id/related — related articles by same topic (Task 31.4)
+router.get('/articles/:id/related', async (req: Request, res: Response) => {
+  try {
+    const article = await Article.findById(req.params.id).select('topic').lean();
+    if (!article) { res.status(404).json({ error: 'Not found' }); return; }
+
+    const related = await Article.find({
+      _id: { $ne: req.params.id },
+      topic: article.topic,
+      processing_status: { $in: ['done', 'fallback'] },
+    })
+      .select(FEED_PROJECTION)
+      .sort({ created_at: -1 })
+      .limit(5)
+      .lean();
+
+    res.setHeader('Cache-Control', 'public, max-age=300');
+    res.json({
+      items: related.map(a => ({
+        id: a._id.toString(),
+        titleOriginal: a.title_original,
+        titleAi: a.title_ai || '',
+        summaryBullets: a.summary_bullets || [],
+        url: a.url,
+        topic: a.topic || 'ai',
+        source: a.source,
+        publishedAt: a.published_at || a.created_at,
+        imageUrl: (a as any).image_url || null,
+      })),
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch related articles' });
   }
 });
 
@@ -253,6 +290,111 @@ router.get('/trending', async (req: Request, res: Response) => {
     res.status(500).json({ error: 'Failed to fetch trending' });
   }
 });
+
+// GET /api/public/sitemap.xml — dynamic sitemap from article catalog (Task 32.4)
+router.get('/sitemap.xml', async (_req: Request, res: Response) => {
+  try {
+    const articles = await Article.find({ processing_status: { $in: ['done', 'fallback'] } })
+      .select('_id created_at topic')
+      .sort({ created_at: -1 })
+      .limit(1000)
+      .lean();
+
+    let xml = '<?xml version="1.0" encoding="UTF-8"?>\n';
+    xml += '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n';
+    xml += '  <url><loc>https://trendbriefai.vn/</loc><changefreq>hourly</changefreq><priority>1.0</priority></url>\n';
+
+    for (const a of articles) {
+      const date = new Date(a.created_at).toISOString().slice(0, 10);
+      xml += `  <url><loc>https://trendbriefai.vn/article/${a._id}</loc><lastmod>${date}</lastmod><changefreq>weekly</changefreq><priority>0.7</priority></url>\n`;
+    }
+
+    xml += '</urlset>';
+    res.setHeader('Content-Type', 'application/xml');
+    res.setHeader('Cache-Control', 'public, max-age=3600');
+    res.send(xml);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to generate sitemap' });
+  }
+});
+
+// GET /api/public/news-sitemap.xml — Google News sitemap (Task 32.5)
+router.get('/news-sitemap.xml', async (_req: Request, res: Response) => {
+  try {
+    const twoDaysAgo = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000);
+    const articles = await Article.find({
+      processing_status: { $in: ['done', 'fallback'] },
+      created_at: { $gte: twoDaysAgo },
+    })
+      .select('_id title_ai title_original created_at topic')
+      .sort({ created_at: -1 })
+      .limit(1000)
+      .lean();
+
+    let xml = '<?xml version="1.0" encoding="UTF-8"?>\n';
+    xml += '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:news="http://www.google.com/schemas/sitemap-news/0.9">\n';
+
+    for (const a of articles) {
+      const title = (a.title_ai || a.title_original).replace(/&/g, '&amp;').replace(/</g, '&lt;');
+      const pubDate = new Date(a.created_at).toISOString();
+      xml += `  <url>\n`;
+      xml += `    <loc>https://trendbriefai.vn/article/${a._id}</loc>\n`;
+      xml += `    <news:news>\n`;
+      xml += `      <news:publication><news:name>TrendBrief AI</news:name><news:language>vi</news:language></news:publication>\n`;
+      xml += `      <news:publication_date>${pubDate}</news:publication_date>\n`;
+      xml += `      <news:title>${title}</news:title>\n`;
+      xml += `    </news:news>\n`;
+      xml += `  </url>\n`;
+    }
+
+    xml += '</urlset>';
+    res.setHeader('Content-Type', 'application/xml');
+    res.setHeader('Cache-Control', 'public, max-age=1800');
+    res.send(xml);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to generate news sitemap' });
+  }
+});
+
+// GET /api/public/share-image/:id — OG image for sharing (Task 29.1)
+router.get('/share-image/:id', async (req: Request, res: Response) => {
+  try {
+    const article = await Article.findById(req.params.id)
+      .select('title_ai title_original summary_bullets topic')
+      .lean();
+    if (!article) { res.status(404).json({ error: 'Not found' }); return; }
+
+    const title = article.title_ai || article.title_original;
+    const bullet = article.summary_bullets?.[0] || '';
+    const topic = article.topic || 'ai';
+
+    // Generate a simple SVG-based OG image (no sharp/canvas dependency needed)
+    const svg = `
+      <svg width="1200" height="630" xmlns="http://www.w3.org/2000/svg">
+        <rect width="1200" height="630" fill="#1a1a2e"/>
+        <rect x="0" y="0" width="1200" height="8" fill="#6366f1"/>
+        <text x="60" y="80" font-family="sans-serif" font-size="24" fill="#818cf8" font-weight="600">${topic.toUpperCase()}</text>
+        <text x="60" y="160" font-family="sans-serif" font-size="48" fill="#ffffff" font-weight="700">
+          ${escapeXml(title.slice(0, 60))}
+        </text>
+        ${title.length > 60 ? `<text x="60" y="220" font-family="sans-serif" font-size="48" fill="#ffffff" font-weight="700">${escapeXml(title.slice(60, 120))}</text>` : ''}
+        <text x="60" y="320" font-family="sans-serif" font-size="28" fill="#94a3b8">${escapeXml(bullet.slice(0, 80))}</text>
+        <text x="60" y="560" font-family="sans-serif" font-size="28" fill="#6366f1" font-weight="600">⚡ TrendBrief AI</text>
+        <text x="60" y="595" font-family="sans-serif" font-size="20" fill="#64748b">trendbriefai.vn</text>
+      </svg>
+    `;
+
+    res.setHeader('Content-Type', 'image/svg+xml');
+    res.setHeader('Cache-Control', 'public, max-age=86400');
+    res.send(svg);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to generate share image' });
+  }
+});
+
+function escapeXml(s: string): string {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
 
 /**
  * @swagger

@@ -24,6 +24,42 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./pages/profile/profile.component').then(m => m.ProfileComponent),
       },
+      // Admin pages
+      {
+        path: 'admin/analytics',
+        loadComponent: () =>
+          import('./pages/admin/analytics/analytics.component').then(m => m.AnalyticsComponent),
+      },
+      {
+        path: 'admin/sources',
+        loadComponent: () =>
+          import('./pages/admin/sources/sources.component').then(m => m.SourcesComponent),
+      },
+      {
+        path: 'admin/moderation',
+        loadComponent: () =>
+          import('./pages/admin/moderation/moderation.component').then(m => m.ModerationComponent),
+      },
+      {
+        path: 'admin/ads',
+        loadComponent: () =>
+          import('./pages/admin/ads/ads.component').then(m => m.AdsComponent),
+      },
+      {
+        path: 'admin/affiliates',
+        loadComponent: () =>
+          import('./pages/admin/affiliates/affiliates.component').then(m => m.AffiliatesComponent),
+      },
+      {
+        path: 'admin/notifications',
+        loadComponent: () =>
+          import('./pages/admin/notifications/notifications.component').then(m => m.NotificationsComponent),
+      },
+      {
+        path: 'admin/users',
+        loadComponent: () =>
+          import('./pages/admin/users/users.component').then(m => m.UsersComponent),
+      },
     ],
   },
   {

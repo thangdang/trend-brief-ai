@@ -3,8 +3,10 @@ import mongoose, { Schema, Document, Types } from 'mongoose';
 export interface INotificationLog extends Document {
   user_id: Types.ObjectId;
   article_id: Types.ObjectId;
-  type: 'trending' | 'topic_update' | 'weekly_digest';
+  type: 'trending' | 'topic_update' | 'daily_digest' | 'weekly_digest';
   sent_at: Date;
+  delivered_at?: Date;
+  opened_at?: Date;
 }
 
 const NotificationLogSchema = new Schema<INotificationLog>(
@@ -21,12 +23,18 @@ const NotificationLogSchema = new Schema<INotificationLog>(
     },
     type: {
       type: String,
-      enum: ['trending', 'topic_update', 'weekly_digest'],
+      enum: ['trending', 'topic_update', 'daily_digest', 'weekly_digest'],
       required: true,
     },
     sent_at: {
       type: Date,
       default: Date.now,
+    },
+    delivered_at: {
+      type: Date,
+    },
+    opened_at: {
+      type: Date,
     },
   },
   {

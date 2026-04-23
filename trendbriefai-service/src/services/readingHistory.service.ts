@@ -73,3 +73,57 @@ export async function getReadingHistory(
 
   return { items, page, totalPages, hasMore: page < totalPages };
 }
+
+
+/**
+ * Get articles the user viewed for less than 10 seconds ("Đọc tiếp" — Task 31.3).
+ * Uses view interactions with short duration between view and next action.
+ */
+export async function getContinueReading(
+  userId: string,
+  limit = 5,
+): Promise<FeedItem[]> {
+  // Find articles viewed only once (no click_original or extended view)
+  // Heuristic: articles with a view but no click_original interaction
+  const viewedArticles = await Interaction.aggregate([
+    { $match: { user_id: userId, action: 'view' } },
+    { $sort: { created_at: -1 } },
+    { $group: { _id: '$article_id', viewCount: { $sum: 1 }, lastViewed: { $first: '$created_at' } } },
+    { $match: { viewCount: 1 } }, // Only viewed once (likely bounced)
+    { $sort: { lastViewed: -1 } },
+    { $limit: limit },
+  ]);
+
+  if (viewedArticles.length === 0) return [];
+
+  // Exclude articles where user clicked original (they actually read it)
+  const articleIds = viewedArticles.map((v) => v._id);
+  const clickedArticles = await Interaction.distinct('article_id', {
+    user_id: userId,
+    article_id: { $in: articleIds },
+    action: 'click_original',
+  });
+  const clickedSet = new Set(clickedArticles.map((id: any) => id.toString()));
+
+  const filteredIds = articleIds.filter((id: any) => !clickedSet.has(id.toString()));
+  if (filteredIds.length === 0) return [];
+
+  const articles = await Article.find({ _id: { $in: filteredIds }, processing_status: 'done' }).lean();
+
+  return articles.map((a: any) => ({
+    id: a._id.toString(),
+    titleOriginal: a.title_original,
+    titleAi: a.title_ai ?? '',
+    summaryBullets: a.summary_bullets ?? [],
+    reason: a.reason ?? '',
+    url: a.url,
+    topic: a.topic ?? 'ai',
+    source: a.source,
+    publishedAt: a.published_at?.toISOString() ?? '',
+    isBookmarked: false,
+    createdAt: a.created_at.toISOString(),
+    readingTimeSec: estimateReadingTimeSec(a),
+    isSponsored: false,
+    isTrending: false,
+  }));
+}

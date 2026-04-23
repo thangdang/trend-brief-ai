@@ -51,6 +51,14 @@
       </a>
       <button class="btn-share" (click)="share(a)">Chia sẻ ↗</button>
     </div>
+
+    <!-- Social sharing buttons (Task 32.7) -->
+    <div class="social-share">
+      <span>Chia sẻ:</span>
+      <a [href]="'https://zalo.me/share?url=' + encodeURI('https://trendbriefai.vn/article/' + a.id)" target="_blank" class="share-btn zalo">Zalo</a>
+      <a [href]="'https://www.facebook.com/sharer/sharer.php?u=' + encodeURI('https://trendbriefai.vn/article/' + a.id)" target="_blank" class="share-btn fb">Facebook</a>
+      <button class="share-btn copy" (click)="copyLink(a)">Copy link</button>
+    </div>
   </article>
 }
 

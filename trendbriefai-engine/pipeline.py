@@ -17,6 +17,7 @@ from services.summarizer import generate_summary
 from services.classifier import classify_topic
 from services.dedup import deduplicate_article, url_hash
 from services.quality_scorer import ContentQualityScorer
+from services.content_moderator import ContentModerator
 from services.translator import ensure_vietnamese
 
 logger = logging.getLogger(__name__)
@@ -47,6 +48,7 @@ async def _process_single_article(
     cache=None,
     faiss_index=None,
     quality_scorer: ContentQualityScorer | None = None,
+    content_moderator: ContentModerator | None = None,
     redis_cache=None,
 ) -> str:
     """Process one article. Returns 'new', 'duplicate', or 'failed'."""
@@ -66,6 +68,13 @@ async def _process_single_article(
             if existing is not None:
                 return "duplicate"
 
+            # Step 1b: Content moderation — source check
+            if content_moderator is not None:
+                source_check = content_moderator.check_source(entry_url)
+                if not source_check["allowed"]:
+                    logger.info("Blocked source %s: %s", entry_url, source_check["reason"])
+                    return "failed"
+
             # Step 2: Extract and clean article
             cleaned = await extract_and_clean(entry_url)
             if cleaned is None or len(cleaned["text"]) < 100:
@@ -81,6 +90,24 @@ async def _process_single_article(
             title = tr["title"]
             was_translated = tr["translated"]
             source_lang = tr["source_lang"]
+
+            # Step 2c: Content moderation — keyword blocklist check
+            if content_moderator is not None:
+                mod_result = content_moderator.moderate(entry_url, clean_text, title)
+                if mod_result["blocked"]:
+                    logger.info("Blocked article %s: %s", entry_url, mod_result["reasons"])
+                    article_doc = {
+                        "url": entry_url,
+                        "url_hash": hash_val,
+                        "title_original": title,
+                        "content_clean": clean_text[:500],
+                        "processing_status": "blocked",
+                        "moderation_reasons": mod_result["reasons"],
+                        "source": entry.get("source", ""),
+                        "created_at": datetime.utcnow(),
+                    }
+                    await articles_col.insert_one(article_doc)
+                    return "failed"
 
             # Step 3: Quality scoring gate
             if quality_scorer is not None:
@@ -179,6 +206,8 @@ async def run_ingestion_pipeline(
     semaphore = asyncio.Semaphore(concurrency)
     rate_limiter = asyncio.Lock()
     quality_scorer = ContentQualityScorer()
+    content_moderator = ContentModerator(db)
+    await content_moderator.load_config()
 
     # Optional: initialize caches (best-effort)
     cache = None
@@ -213,7 +242,8 @@ async def run_ingestion_pipeline(
         _process_single_article(
             entry, db, semaphore, rate_limiter, rate_delay,
             cache=cache, faiss_index=faiss_index,
-            quality_scorer=quality_scorer, redis_cache=redis_cache,
+            quality_scorer=quality_scorer, content_moderator=content_moderator,
+            redis_cache=redis_cache,
         )
         for entry in entries
     ]

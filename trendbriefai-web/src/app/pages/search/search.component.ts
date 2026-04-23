@@ -2,6 +2,7 @@ import { Component, inject, OnInit, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { DatePipe } from '@angular/common';
 import { ApiService, Article } from '../../services/api.service';
+import { SeoService } from '../../services/seo.service';
 
 @Component({
   selector: 'app-search',
@@ -13,6 +14,7 @@ import { ApiService, Article } from '../../services/api.service';
 export class SearchComponent implements OnInit {
   private api = inject(ApiService);
   private route = inject(ActivatedRoute);
+  private seo = inject(SeoService);
 
   query = signal('');
   items = signal<Article[]>([]);
@@ -27,7 +29,14 @@ export class SearchComponent implements OnInit {
       this.query.set(q);
       this.items.set([]);
       this.page.set(1);
-      if (q) this.doSearch(true);
+      if (q) {
+        this.seo.updatePage({
+          title: `"${q}" — Tìm kiếm`,
+          description: `Kết quả tìm kiếm cho "${q}" trên TrendBrief AI.`,
+          url: `/search?q=${encodeURIComponent(q)}`,
+        });
+        this.doSearch(true);
+      }
     });
   }
 

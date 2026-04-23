@@ -8,7 +8,7 @@ class ReviewPromptService {
   static const _lastDayKey = 'review_last_day';
 
   static const _minDaysOpened = 5;
-  static const _minArticlesViewed = 20;
+  static const _minArticlesViewed = 7; // Tuned: trigger after 7th article view (Task 31.2)
   static const _cooldownDays = 90;
 
   Future<void> incrementDaysOpened() async {

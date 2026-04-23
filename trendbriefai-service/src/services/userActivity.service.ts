@@ -20,6 +20,41 @@ export async function recordActivity(userId: string): Promise<void> {
     },
     { upsert: true },
   );
+
+  // Update reading streak (Task 31.1)
+  await updateStreak(userId, dateStr);
+}
+
+/** Update consecutive-day reading streak on User model. */
+async function updateStreak(userId: string, todayStr: string): Promise<void> {
+  try {
+    const user = await User.findById(userId).select('last_active_date streak_count').lean();
+    if (!user) return;
+
+    const today = new Date(todayStr);
+    const lastActive = user.last_active_date ? new Date(user.last_active_date) : null;
+
+    let newStreak = 1;
+    if (lastActive) {
+      const diffMs = today.getTime() - lastActive.getTime();
+      const diffDays = Math.round(diffMs / (24 * 60 * 60 * 1000));
+      if (diffDays === 1) {
+        // Consecutive day — increment streak
+        newStreak = (user.streak_count || 0) + 1;
+      } else if (diffDays === 0) {
+        // Same day — keep current streak
+        return;
+      }
+      // diffDays > 1 → streak resets to 1
+    }
+
+    await User.findByIdAndUpdate(userId, {
+      streak_count: newStreak,
+      last_active_date: today,
+    });
+  } catch {
+    // Non-critical — don't break activity recording
+  }
 }
 
 /**

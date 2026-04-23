@@ -4,6 +4,7 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:infinite_scroll_pagination/infinite_scroll_pagination.dart';
 import '../models/feed_item.dart';
 import '../services/api_service.dart';
+import '../services/analytics_service.dart';
 import '../services/share_service.dart';
 import '../services/cache_service.dart';
 import '../widgets/enhanced_feed_card.dart';
@@ -22,6 +23,7 @@ class FeedScreen extends StatefulWidget {
 
 class _FeedScreenState extends State<FeedScreen> {
   final ApiService _api = ApiService();
+  final AnalyticsService _analytics = AnalyticsService();
   final CacheService _cache = CacheService();
   String _selectedTopic = 'all';
   List<FeedItem> _trending = [];
@@ -103,6 +105,7 @@ class _FeedScreenState extends State<FeedScreen> {
         await _api.removeBookmark(item.id);
       } else {
         await _api.addBookmark(item.id);
+        _analytics.logBookmarkAdd(item.id, item.topic);
       }
       setState(() => item.isBookmarked = !item.isBookmarked);
     } catch (_) {}
@@ -159,6 +162,7 @@ class _FeedScreenState extends State<FeedScreen> {
                       onShare: () async {
                         await ShareService.shareArticle(item);
                         _api.trackShare(item.id).catchError((_) {});
+                        _analytics.logArticleShare(item.id, item.topic);
                       },
                       onTap: () => Navigator.push(context, MaterialPageRoute(
                         builder: (_) => ArticleDetailScreen(articleId: item.id, preloaded: item),

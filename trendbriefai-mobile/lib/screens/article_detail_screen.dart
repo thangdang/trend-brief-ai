@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../models/feed_item.dart';
 import '../services/api_service.dart';
+import '../services/analytics_service.dart';
 import '../services/share_service.dart';
 import '../services/review_prompt_service.dart';
 import '../utils/time_formatter.dart';
@@ -19,6 +20,7 @@ class ArticleDetailScreen extends StatefulWidget {
 
 class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
   final _api = ApiService();
+  final _analytics = AnalyticsService();
   final _reviewService = ReviewPromptService();
   FeedItem? _item;
   bool _loading = true;
@@ -38,10 +40,20 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
     _api.trackInteraction(widget.articleId, 'view').catchError((_) {});
     _reviewService.incrementArticlesViewed();
 
+    // Log article_view analytics event
+    final topic = _item?.topic ?? '';
+    if (topic.isNotEmpty) {
+      _analytics.logArticleView(widget.articleId, topic);
+    }
+
     if (_item == null) {
       try {
         final item = await _api.getArticle(widget.articleId);
         if (mounted) setState(() { _item = item; _loading = false; });
+        // Log with resolved topic if we didn't have it before
+        if (topic.isEmpty && item.topic.isNotEmpty) {
+          _analytics.logArticleView(widget.articleId, item.topic);
+        }
       } catch (_) {
         if (mounted) setState(() => _loading = false);
       }
@@ -52,6 +64,42 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
   void dispose() {
     _reviewService.checkAndPrompt();
     super.dispose();
+  }
+
+  void _showReportDialog() {
+    final reasons = [
+      'Nội dung spam / quảng cáo',
+      'Thông tin sai lệch',
+      'Nội dung không phù hợp',
+      'Vi phạm bản quyền',
+      'Khác',
+    ];
+    showDialog(
+      context: context,
+      builder: (ctx) => SimpleDialog(
+        title: const Text('Báo cáo bài viết'),
+        children: reasons.map((r) => SimpleDialogOption(
+          onPressed: () async {
+            Navigator.pop(ctx);
+            try {
+              await _api.reportArticle(_item!.id, r);
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Báo cáo đã được ghi nhận')),
+                );
+              }
+            } catch (_) {
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Không thể gửi báo cáo')),
+                );
+              }
+            }
+          },
+          child: Text(r),
+        )).toList(),
+      ),
+    );
   }
 
   Color _topicColor(String topic) {
@@ -88,6 +136,7 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
                     await _api.removeBookmark(_item!.id);
                   } else {
                     await _api.addBookmark(_item!.id);
+                    _analytics.logBookmarkAdd(_item!.id, _item!.topic);
                   }
                   setState(() => _item!.isBookmarked = !_item!.isBookmarked);
                 } catch (_) {}
@@ -98,6 +147,7 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
               onPressed: () async {
                 await ShareService.shareArticle(_item!);
                 _api.trackShare(_item!.id).catchError((_) {});
+                _analytics.logArticleShare(_item!.id, _item!.topic);
               },
             ),
           ],
@@ -189,6 +239,16 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
                           },
                           icon: const Icon(Icons.open_in_new),
                           label: const Text('Đọc bài gốc'),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      // Report button (Task 28.3)
+                      SizedBox(
+                        width: double.infinity,
+                        child: TextButton.icon(
+                          onPressed: () => _showReportDialog(),
+                          icon: Icon(Icons.flag_outlined, color: Colors.grey[600], size: 18),
+                          label: Text('Báo cáo bài viết', style: TextStyle(color: Colors.grey[600])),
                         ),
                       ),
                     ],

@@ -20,15 +20,48 @@ dependencies:
   hive_flutter: ^1.1.0
   share_plus: ^7.2.1
   in_app_review: ^2.0.8
-  firebase_messaging: ^14.7.0
   firebase_core: ^2.24.0
+  firebase_crashlytics: ^3.4.0
+  firebase_analytics: ^10.8.0
+  firebase_messaging: ^14.7.0
+  flutter_local_notifications: ^17.0.0
   shimmer: ^3.0.0
   connectivity_plus: ^5.0.2
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
+  integration_test:
+    sdk: flutter
   flutter_lints: ^3.0.1
+  flutter_launcher_icons: ^0.14.1
+  flutter_native_splash: ^2.4.0
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/icon/app_icon.png"
+  min_sdk_android: 21
+  adaptive_icon_background: "#6366f1"
+  adaptive_icon_foreground: "assets/icon/app_icon.png"
+  web:
+    generate: true
+    image_path: "assets/icon/app_icon.png"
+
+flutter_native_splash:
+  color: "#6366f1"
+  image: "assets/splash/splash_logo.png"
+  android_12:
+    color: "#6366f1"
+    icon_background_color: "#6366f1"
+    image: "assets/splash/splash_logo.png"
+  ios: true
+  web: false
 
 flutter:
   uses-material-design: true
+
+  assets:
+    - assets/icon/
+    - assets/splash/
+    - assets/screenshots/

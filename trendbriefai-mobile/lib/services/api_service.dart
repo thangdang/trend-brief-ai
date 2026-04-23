@@ -222,4 +222,17 @@ class ApiService {
   Future<void> trackShare(String articleId) async {
     await trackInteraction(articleId, 'share');
   }
+
+  // --- Report ---
+
+  Future<void> reportArticle(String articleId, String reason) async {
+    await _dio.post('/articles/$articleId/report', data: {'reason': reason});
+  }
+
+  // --- Referral ---
+
+  Future<Map<String, dynamic>> getReferralCode() async {
+    final response = await _dio.get('/referral/code');
+    return Map<String, dynamic>.from(response.data);
+  }
 }

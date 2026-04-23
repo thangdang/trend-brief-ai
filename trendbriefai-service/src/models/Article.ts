@@ -79,6 +79,7 @@ const ArticleSchema = new Schema<IArticle>(
     },
     sponsor_name: { type: String },
     sponsor_url: { type: String },
+    report_count: { type: Number, default: 0 },
   },
   {
     timestamps: { createdAt: 'created_at', updatedAt: false },

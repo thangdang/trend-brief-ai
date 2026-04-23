@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import * as authService from '../services/auth.service';
+import { applyReferral } from '../services/referral.service';
 import { validate } from '../middleware/validate';
 import { registerSchema, loginSchema, refreshSchema } from '../types/schemas';
 
@@ -52,8 +53,22 @@ const router = Router();
  */
 router.post('/register', validate(registerSchema), async (req: Request, res: Response) => {
   try {
-    const { email, password } = req.body;
+    const { email, password, referralCode } = req.body;
     const tokens = await authService.register(email, password);
+
+    // Apply referral code if provided (Task 30.4)
+    if (referralCode && typeof referralCode === 'string') {
+      try {
+        // Decode the JWT to get the new user's ID
+        const jwt = await import('jsonwebtoken');
+        const { config } = await import('../config');
+        const payload = jwt.default.verify(tokens.accessToken, config.jwtSecret) as { id: string };
+        await applyReferral(payload.id, referralCode);
+      } catch (_) {
+        // Referral failure shouldn't block registration
+      }
+    }
+
     res.status(201).json(tokens);
   } catch (err: any) {
     if (err.message === 'Email already registered') {

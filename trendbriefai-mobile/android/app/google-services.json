@@ -1,0 +1,36 @@
+{
+  "_comment": "TODO: Replace this placeholder with your real google-services.json from Firebase Console.",
+  "_instructions": [
+    "1. Go to https://console.firebase.google.com/",
+    "2. Create or select your Firebase project",
+    "3. Add an Android app with package name matching your app (e.g., com.trendbriefai.app)",
+    "4. Download google-services.json and replace this file"
+  ],
+  "project_info": {
+    "project_number": "TODO_PROJECT_NUMBER",
+    "project_id": "TODO_PROJECT_ID",
+    "storage_bucket": "TODO_PROJECT_ID.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:TODO_PROJECT_NUMBER:android:TODO_APP_HASH",
+        "android_client_info": {
+          "package_name": "com.trendbriefai.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "TODO_ANDROID_API_KEY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

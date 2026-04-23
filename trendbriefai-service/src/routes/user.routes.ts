@@ -4,7 +4,7 @@ import { validate } from '../middleware/validate';
 import { updateInterestsSchema } from '../types/schemas';
 import { User } from '../models/User';
 import { invalidateUserFeedCache } from '../services/feed.service';
-import { getReadingHistory } from '../services/readingHistory.service';
+import { getReadingHistory, getContinueReading } from '../services/readingHistory.service';
 import { getUserStats } from '../services/userStats.service';
 
 const router = Router();
@@ -72,6 +72,7 @@ router.get('/me', authMiddleware, async (req: Request, res: Response) => {
       interests: user.interests,
       onboardingCompleted: user.onboarding_completed,
       notificationsEnabled: user.notifications_enabled,
+      notificationPrefs: user.notification_prefs,
       settings: user.settings,
       createdAt: user.created_at,
     });
@@ -406,6 +407,15 @@ router.put('/me/settings', authMiddleware, async (req: Request, res: Response) =
     if (req.body.theme) {
       updates['settings.theme'] = req.body.theme;
     }
+    // Per-type notification preferences (Task 26.5)
+    if (req.body.notification_prefs && typeof req.body.notification_prefs === 'object') {
+      const validKeys = ['trending', 'topic', 'daily', 'weekly'];
+      for (const key of validKeys) {
+        if (typeof req.body.notification_prefs[key] === 'boolean') {
+          updates[`notification_prefs.${key}`] = req.body.notification_prefs[key];
+        }
+      }
+    }
 
     const user = await User.findByIdAndUpdate(
       req.user!.id,
@@ -417,10 +427,21 @@ router.put('/me/settings', authMiddleware, async (req: Request, res: Response) =
 
     res.json({
       notificationsEnabled: user.notifications_enabled,
+      notificationPrefs: user.notification_prefs,
       settings: user.settings,
     });
   } catch (err) {
     res.status(500).json({ error: 'Failed to update settings' });
+  }
+});
+
+// GET /api/users/me/continue-reading — articles viewed briefly (Task 31.3)
+router.get('/me/continue-reading', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const items = await getContinueReading(req.user!.id);
+    res.json({ items });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch continue reading' });
   }
 });
 
