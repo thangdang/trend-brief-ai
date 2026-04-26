@@ -3,6 +3,7 @@ import * as authService from '../services/auth.service';
 import { applyReferral } from '../services/referral.service';
 import { validate } from '../middleware/validate';
 import { registerSchema, loginSchema, refreshSchema } from '../types/schemas';
+import { verifyGoogleToken, verifyAppleToken, findOrCreateSSOUser, generateTokens } from '../services/sso.service';
 
 const router = Router();
 
@@ -12,61 +13,19 @@ const router = Router();
  *   post:
  *     tags: [Auth]
  *     summary: Register a new user
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required: [email, password]
- *             properties:
- *               email:
- *                 type: string
- *                 format: email
- *               password:
- *                 type: string
- *                 format: password
- *     responses:
- *       201:
- *         description: Registration successful, returns tokens
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 accessToken:
- *                   type: string
- *                 refreshToken:
- *                   type: string
- *       409:
- *         description: Email already registered
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
- *       500:
- *         description: Registration failed
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
  */
 router.post('/register', validate(registerSchema), async (req: Request, res: Response) => {
   try {
     const { email, password, referralCode } = req.body;
     const tokens = await authService.register(email, password);
 
-    // Apply referral code if provided (Task 30.4)
     if (referralCode && typeof referralCode === 'string') {
       try {
-        // Decode the JWT to get the new user's ID
         const jwt = await import('jsonwebtoken');
         const { config } = await import('../config');
         const payload = jwt.default.verify(tokens.accessToken, config.jwtSecret) as { id: string };
         await applyReferral(payload.id, referralCode);
-      } catch (_) {
-        // Referral failure shouldn't block registration
-      }
+      } catch (_) { /* referral failure shouldn't block registration */ }
     }
 
     res.status(201).json(tokens);
@@ -85,44 +44,6 @@ router.post('/register', validate(registerSchema), async (req: Request, res: Res
  *   post:
  *     tags: [Auth]
  *     summary: Log in with email and password
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required: [email, password]
- *             properties:
- *               email:
- *                 type: string
- *                 format: email
- *               password:
- *                 type: string
- *                 format: password
- *     responses:
- *       200:
- *         description: Login successful, returns tokens
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 accessToken:
- *                   type: string
- *                 refreshToken:
- *                   type: string
- *       401:
- *         description: Invalid email or password
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
- *       500:
- *         description: Login failed
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
  */
 router.post('/login', validate(loginSchema), async (req: Request, res: Response) => {
   try {
@@ -140,44 +61,104 @@ router.post('/login', validate(loginSchema), async (req: Request, res: Response)
 
 /**
  * @swagger
- * /auth/refresh:
+ * /auth/google:
  *   post:
  *     tags: [Auth]
- *     summary: Refresh access token
+ *     summary: Login/Register with Google SSO
  *     requestBody:
  *       required: true
  *       content:
  *         application/json:
  *           schema:
  *             type: object
- *             required: [refreshToken]
+ *             required: [idToken]
  *             properties:
- *               refreshToken:
+ *               idToken:
  *                 type: string
  *     responses:
  *       200:
- *         description: Token refreshed successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 accessToken:
- *                   type: string
- *                 refreshToken:
- *                   type: string
+ *         description: SSO login successful
+ *       201:
+ *         description: New user created via SSO
  *       401:
- *         description: Invalid or expired refresh token
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
- *       500:
- *         description: Token refresh failed
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
+ *         description: Token verification failed
+ */
+router.post('/google', async (req: Request, res: Response) => {
+  try {
+    const { idToken } = req.body;
+    if (!idToken) {
+      res.status(400).json({ error: 'idToken required' });
+      return;
+    }
+
+    const googleData = await verifyGoogleToken(idToken);
+    const { user, isNew } = await findOrCreateSSOUser(
+      'google', googleData.googleId, googleData.email, googleData.name, googleData.avatar
+    );
+
+    const tokens = generateTokens(user._id.toString(), user.email);
+    res.status(isNew ? 201 : 200).json({ ...tokens, isNew });
+  } catch (error: any) {
+    res.status(401).json({ error: error.message || 'Google authentication failed' });
+  }
+});
+
+/**
+ * @swagger
+ * /auth/apple:
+ *   post:
+ *     tags: [Auth]
+ *     summary: Login/Register with Apple SSO
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [idToken]
+ *             properties:
+ *               idToken:
+ *                 type: string
+ *               user:
+ *                 type: object
+ *                 properties:
+ *                   name:
+ *                     type: string
+ *     responses:
+ *       200:
+ *         description: SSO login successful
+ *       201:
+ *         description: New user created via SSO
+ *       401:
+ *         description: Token verification failed
+ */
+router.post('/apple', async (req: Request, res: Response) => {
+  try {
+    const { idToken, user: appleUser } = req.body;
+    if (!idToken) {
+      res.status(400).json({ error: 'idToken required' });
+      return;
+    }
+
+    const appleData = await verifyAppleToken(idToken);
+    const name = appleUser?.name || appleData.name || appleData.email.split('@')[0];
+    const { user, isNew } = await findOrCreateSSOUser(
+      'apple', appleData.appleId, appleData.email, name
+    );
+
+    const tokens = generateTokens(user._id.toString(), user.email);
+    res.status(isNew ? 201 : 200).json({ ...tokens, isNew });
+  } catch (error: any) {
+    res.status(401).json({ error: error.message || 'Apple authentication failed' });
+  }
+});
+
+/**
+ * @swagger
+ * /auth/refresh:
+ *   post:
+ *     tags: [Auth]
+ *     summary: Refresh access token
  */
 router.post('/refresh', validate(refreshSchema), async (req: Request, res: Response) => {
   try {

@@ -1,0 +1,27 @@
+:host {
+  display: flex;
+  min-height: 100vh;
+}
+
+.main-area {
+  flex: 1;
+  margin-left: var(--sidebar-width, 260px);
+  display: flex;
+  flex-direction: column;
+}
+
+.page-content {
+  flex: 1;
+  padding: 24px;
+  animation: fadeIn 250ms ease-out;
+}
+
+@media (max-width: 768px) {
+  .main-area { margin-left: 0; }
+  .page-content { padding: 16px; }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}

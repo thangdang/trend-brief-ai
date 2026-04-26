@@ -1,0 +1,36 @@
+<div class="admin-page">
+      <h2>🛡 Kiểm duyệt nội dung</h2>
+
+      <div class="tabs">
+        <button [class.active]="tab === 'reported'" (click)="tab = 'reported'; load()">Bị báo cáo</button>
+        <button [class.active]="tab === 'hidden'" (click)="tab = 'hidden'; load()">Đã ẩn</button>
+      </div>
+
+      <table class="data-table" *ngIf="items().length; else empty">
+        <thead>
+          <tr><th>Tiêu đề</th><th>Nguồn</th><th>Báo cáo</th><th>Trạng thái</th><th>Thao tác</th></tr>
+        </thead>
+        <tbody>
+          @for (item of items(); track item._id) {
+            <tr>
+              <td>{{ item.title_ai || item.title_original }}</td>
+              <td>{{ item.source }}</td>
+              <td>{{ item.reportCount ?? 0 }}</td>
+              <td>{{ item.processing_status }}</td>
+              <td class="actions">
+                <button (click)="moderate(item._id, 'restore')">✅ Khôi phục</button>
+                <button (click)="moderate(item._id, 'hide')">🚫 Ẩn</button>
+                <button (click)="moderate(item._id, 'delete')" class="btn-danger">🗑 Xóa</button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+      <ng-template #empty><p class="empty">Không có bài viết nào.</p></ng-template>
+
+      <div class="section">
+        <h3>Blocklist từ khóa</h3>
+        <textarea [(ngModel)]="blocklistText" rows="4" placeholder="Mỗi từ khóa một dòng"></textarea>
+        <button (click)="saveBlocklist()">Lưu blocklist</button>
+      </div>
+    </div>

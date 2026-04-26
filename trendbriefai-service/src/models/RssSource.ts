@@ -10,23 +10,26 @@ export interface IRssSource extends Document {
   is_active: boolean;
   crawl_interval_minutes: number;
   last_crawled_at?: Date;
-  /** CSS selector to find article links on a listing page (html_scrape only). */
   scrape_link_selector?: string;
-  /** CSS selector to extract article body (html_scrape only). */
   scrape_content_selector?: string;
   created_at: Date;
+  // Health tracking
+  health?: {
+    success_count_24h: number;
+    total_count_24h: number;
+    success_rate: number;
+    consecutive_failures: number;
+    last_successful_at?: Date;
+    last_error?: string;
+    auto_disabled: boolean;
+    disabled_until?: Date;
+  };
 }
 
 const RssSourceSchema = new Schema<IRssSource>(
   {
-    name: {
-      type: String,
-      required: true,
-    },
-    url: {
-      type: String,
-      required: true,
-    },
+    name: { type: String, required: true },
+    url: { type: String, required: true },
     category: String,
     source_type: {
       type: String,
@@ -34,22 +37,29 @@ const RssSourceSchema = new Schema<IRssSource>(
       default: 'rss',
       required: true,
     },
-    is_active: {
-      type: Boolean,
-      default: true,
-    },
-    crawl_interval_minutes: {
-      type: Number,
-      default: 10,
-      min: 1,
-    },
+    is_active: { type: Boolean, default: true },
+    crawl_interval_minutes: { type: Number, default: 10, min: 1 },
     last_crawled_at: Date,
     scrape_link_selector: String,
     scrape_content_selector: String,
+    health: {
+      type: {
+        success_count_24h: { type: Number, default: 0 },
+        total_count_24h: { type: Number, default: 0 },
+        success_rate: { type: Number, default: 1.0 },
+        consecutive_failures: { type: Number, default: 0 },
+        last_successful_at: Date,
+        last_error: String,
+        auto_disabled: { type: Boolean, default: false },
+        disabled_until: Date,
+      },
+      default: () => ({
+        success_count_24h: 0, total_count_24h: 0, success_rate: 1.0,
+        consecutive_failures: 0, auto_disabled: false,
+      }),
+    },
   },
-  {
-    timestamps: { createdAt: 'created_at', updatedAt: false },
-  }
+  { timestamps: { createdAt: 'created_at', updatedAt: false } }
 );
 
 RssSourceSchema.index({ is_active: 1 });

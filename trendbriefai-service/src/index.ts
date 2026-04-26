@@ -25,20 +25,38 @@ import adminRoutes from './routes/admin.routes';
 import articleRoutes from './routes/article.routes';
 import referralRoutes from './routes/referral.routes';
 import reactionRoutes from './routes/reaction.routes';
+import paymentRoutes from './routes/payment.routes';
 import { startCrawlScheduler } from './workers/crawl.worker';
 import { startNotificationScheduler } from './workers/notification.scheduler';
+import { startFeedScoreScheduler } from './workers/feedScore.worker';
 
 const app = express();
 
 // Middleware
 app.use(cors());
-app.use(compression()); // gzip responses — ~60-70% smaller for JSON
+app.use(compression());
 app.use(express.json());
 app.use(generalLimiter);
 
+// API version header
+import { apiVersionHeader } from './middleware/apiVersion';
+app.use(apiVersionHeader);
+
+// Request logger (structured JSON, slow request warnings)
+import { requestLogger } from './middleware/requestLogger';
+app.use(requestLogger);
+
 // Health check
 app.get('/health', (_req, res) => {
-  res.json({ status: 'ok' });
+  const { aiEngineBreaker } = require('./middleware/circuitBreaker');
+  const { getRequestMetrics } = require('./middleware/requestLogger');
+  const { refreshTrendingCache } = require('./services/trending.service');
+  res.json({
+    status: 'ok',
+    circuit_breaker: aiEngineBreaker.getStatus(),
+    request_metrics: getRequestMetrics(),
+    trending_cache: { note: 'Refreshed every 30 min via scheduler' },
+  });
 });
 
 // Swagger docs
@@ -52,6 +70,10 @@ app.get('/api-docs.json', (_req, res) => {
 
 // Public routes (no auth — for user website)
 app.use('/api/public', publicRoutes);
+
+// Image proxy (public, no auth)
+import imageRoutes from './routes/image.routes';
+app.use('/api/img', imageRoutes);
 
 // Routes (auth required — for admin + mobile app)
 app.use('/api/auth', authLimiter, authRoutes);
@@ -71,11 +93,13 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/articles', articleRoutes);
 app.use('/api/referral', referralRoutes);
 app.use('/api/reactions', reactionRoutes);
+app.use('/api/payment', paymentRoutes);
 
 async function start() {
   await connectDatabase();
   startCrawlScheduler();
   startNotificationScheduler();
+  startFeedScoreScheduler();
 
   app.listen(config.port, () => {
     console.log(`🚀 TrendBrief API running on port ${config.port}`);

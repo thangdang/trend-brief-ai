@@ -2,6 +2,8 @@ import { Router, Request, Response } from 'express';
 import { authMiddleware } from '../middleware/auth';
 import { searchArticles } from '../services/search.service';
 import { Topic } from '../types/api.types';
+import { validate } from '../middleware/validate';
+import { searchSchema } from '../types/schemas';
 
 const router = Router();
 

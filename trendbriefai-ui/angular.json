@@ -2,49 +2,59 @@
   "version": 1,
   "newProjectRoot": "projects",
   "projects": {
-    "trend-brief-web-ui": {
+    "trendbriefai-ui": {
       "projectType": "application",
+      "schematics": {
+        "@schematics/angular:component": {
+          "style": "scss",
+          "standalone": true
+        }
+      },
       "root": "",
       "sourceRoot": "src",
+      "prefix": "app",
       "architect": {
         "build": {
           "builder": "@angular-devkit/build-angular:application",
           "options": {
-            "outputPath": "dist",
+            "outputPath": "dist/trendbriefai-ui",
             "index": "src/index.html",
             "browser": "src/main.ts",
             "tsConfig": "tsconfig.app.json",
-            "styles": [
-              "node_modules/bootstrap/dist/css/bootstrap.min.css",
-              "src/styles.scss"
-            ],
+            "inlineStyleLanguage": "scss",
+            "styles": ["src/styles.scss"],
             "scripts": []
           },
           "configurations": {
             "production": {
+              "budgets": [
+                { "type": "initial", "maximumWarning": "2mb", "maximumError": "5mb" }
+              ],
+              "fileReplacements": [
+                { "replace": "src/environments/environment.ts", "with": "src/environments/environment.prod.ts" }
+              ],
               "outputHashing": "all"
             },
             "development": {
               "optimization": false,
               "extractLicenses": false,
-              "sourceMap": true
+              "sourceMap": true,
+              "namedChunks": true
             }
           },
           "defaultConfiguration": "production"
         },
         "serve": {
           "builder": "@angular-devkit/build-angular:dev-server",
+          "options": { "proxyConfig": "proxy.conf.json" },
           "configurations": {
-            "production": {
-              "buildTarget": "trend-brief-web-ui:build:production"
-            },
-            "development": {
-              "buildTarget": "trend-brief-web-ui:build:development"
-            }
+            "production": { "buildTarget": "trendbriefai-ui:build:production" },
+            "development": { "buildTarget": "trendbriefai-ui:build:development" }
           },
           "defaultConfiguration": "development"
         }
       }
     }
-  }
+  },
+  "cli": { "analytics": false }
 }

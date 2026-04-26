@@ -40,6 +40,20 @@ class AuthService extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> loginWithGoogle(String idToken) async {
+    await _api.googleLogin(idToken);
+    _isLoggedIn = true;
+    _profile = await _api.getProfile();
+    notifyListeners();
+  }
+
+  Future<void> loginWithApple(String idToken, {String? name}) async {
+    await _api.appleLogin(idToken, name: name);
+    _isLoggedIn = true;
+    _profile = await _api.getProfile();
+    notifyListeners();
+  }
+
   Future<void> logout() async {
     await _api.logout();
     _isLoggedIn = false;

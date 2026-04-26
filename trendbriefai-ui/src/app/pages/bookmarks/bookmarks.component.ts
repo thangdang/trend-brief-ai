@@ -6,7 +6,7 @@ import { FeedItem } from '../../types/api.types';
   selector: 'app-bookmarks',
   standalone: true,
   templateUrl: './bookmarks.component.html',
-  styleUrls: ['./bookmarks.component.css'],
+  styleUrl: './bookmarks.component.scss',
 })
 export class BookmarksComponent implements OnInit {
   private api = inject(ApiService);

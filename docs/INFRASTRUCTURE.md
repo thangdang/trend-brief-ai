@@ -28,7 +28,7 @@
 │                                                                                 │
 │   ┌──────────────────┐  ┌──────────────────┐  ┌──────────────────────────┐      │
 │   │  trendbriefai-web │  │  trendbriefai-ui  │  │  trendbriefai-mobile     │      │
-│   │  (Angular 19+)    │  │  (Angular 19+)    │  │  (Flutter 3.x)           │      │
+│   │  (Angular 21)     │  │  (Angular 21)     │  │  (Flutter 3.x)           │      │
 │   │  Public Website   │  │  Admin Dashboard  │  │  Android / iOS App       │      │
 │   │  Port: 4201→80    │  │  Port: 4200→80    │  │  Built locally           │      │
 │   │  nginx reverse    │  │  nginx reverse    │  │  Dio HTTP client         │      │
@@ -68,12 +68,23 @@
 │   │ • bookmarks       │       │ • Session cache   │                              │
 │   │ • interactions    │       │ • Crawl locks     │                              │
 │   │ • rss_sources     │       │                   │                              │
-│   │ • clusters        │       │                   │                              │
-│   │ • topics          │       │                   │                              │
-│   │ • device_tokens   │       │                   │                              │
-│   │ • notification_   │       │                   │                              │
-│   │   logs            │       │                   │                              │
-│   └──────────────────┘       └──────────────────┘                              │
+│   │ • clusters        │       └───────────────────┘                              │
+│   │ • topics          │                                                          │
+│   │ • device_tokens   │       ┌───────────────────┐                              │
+│   │ • notification_   │       │  Meilisearch v1.7  │                              │
+│   │   logs            │       │   Port: 7700       │                              │
+│   │ • ads             │       │                   │                              │
+│   │ • affiliate_links │       │ • Full-text search │                              │
+│   │ • analytics       │       │ • Typo-tolerant   │                              │
+│   │ • payments        │       │ • Article indexing │                              │
+│   │ • subscriptions   │       │                   │                              │
+│   │ • reactions       │       └───────────────────┘                              │
+│   │ • referrals       │                                                          │
+│   │ • article_reports │                                                          │
+│   │ • user_activities │                                                          │
+│   │ • summary_feedback│                                                          │
+│   │ (19 collections)  │                                                          │
+│   └──────────────────┘                                                           │
 └─────────────────────────────────────────────────────────────────────────────────┘
                         │
                         │ HTTP (AI_SERVICE_URL)
@@ -121,6 +132,7 @@ trendbriefai-ui   ──nginx /api/──→  trendbriefai-service:3000 (via bac
 trendbriefai-mobile ──Dio HTTP──→   trendbriefai-service:3000
 trendbriefai-service ──mongoose──→  MongoDB:27017
 trendbriefai-service ──ioredis───→  Redis:6379
+trendbriefai-service ──meilisearch-js→ Meilisearch:7700
 trendbriefai-service ──axios─────→  trendbriefai-engine:8000
 trendbriefai-engine  ──motor─────→  MongoDB:27017
 trendbriefai-engine  ──redis─────→  Redis:6379
@@ -136,12 +148,13 @@ trendbriefai-engine  ──ollama────→  Ollama:11434 (host.docker.inte
 |---------|-----------|----------------------|----------------------|----------------|-------------|
 | **trendbriefai-engine** | Python 3.12, FastAPI, Ollama SDK, sentence-transformers, feedparser, newspaper3k, langdetect, lxml, faiss-cpu | 8000:8000 | `python:3.12-slim` | CPU: 2 cores, RAM: 2–4 GB (sentence-transformers model loaded in memory) | `GET /health` — Python urllib check |
 | **trendbriefai-service** | Node.js 22, Express.js, TypeScript, Mongoose, BullMQ, ioredis, JWT, Zod, node-cron | 3000:3000 | `node:22-alpine` (multi-stage build) | CPU: 1 core, RAM: 512 MB–1 GB | `GET /health` — wget spider check |
-| **trendbriefai-web** | Angular 19+, standalone components, nginx | 4201:80 | Build: `node:20-alpine`, Run: `nginx:alpine` | CPU: 0.25 core, RAM: 128 MB (static files only) | nginx default (port 80 open) |
-| **trendbriefai-ui** | Angular 19+, ArchitectUI, Bootstrap 5, nginx | 4200:80 | Build: `node:22-slim`, Run: `nginx:alpine` | CPU: 0.25 core, RAM: 128 MB (static files only) | nginx default (port 80 open) |
+| **trendbriefai-web** | Angular 21, standalone components, nginx | 4201:80 | Build: `node:20-alpine`, Run: `nginx:alpine` | CPU: 0.25 core, RAM: 128 MB (static files only) | nginx default (port 80 open) |
+| **trendbriefai-ui** | Angular 21, ArchitectUI, Bootstrap 5, nginx | 4200:80 | Build: `node:22-slim`, Run: `nginx:alpine` | CPU: 0.25 core, RAM: 128 MB (static files only) | nginx default (port 80 open) |
 | **trendbriefai-mobile** | Flutter 3.x, Dio, Provider, firebase_messaging, hive | N/A (built locally) | N/A (no Dockerfile) | Local dev machine | N/A |
 | **MongoDB** | MongoDB 7 | 27017:27017 | `mongo:7` | CPU: 1 core, RAM: 1–2 GB, Disk: 10+ GB | `mongosh db.adminCommand('ping')` |
 | **Redis** | Redis 7 Alpine | 6379:6379 | `redis:7-alpine` | CPU: 0.5 core, RAM: 256 MB | `redis-cli ping` |
 | **Ollama** | Ollama (host-native) | 11434 (host only) | N/A (not containerized) | GPU: 6–10 GB VRAM (or CPU: 8+ GB RAM) | `curl http://localhost:11434/api/tags` |
+| **Meilisearch** | Meilisearch v1.7 | 7700:7700 | `getmeili/meilisearch:v1.7` | CPU: 0.5 core, RAM: 256 MB–1 GB | `wget --spider http://localhost:7700/health` |
 
 ### Dockerfile Build Details
 
@@ -188,6 +201,10 @@ trendbriefai-engine  ──ollama────→  Ollama:11434 (host.docker.inte
 │  │  │  trendbriefai-web │  │  trendbriefai-ui  │             │   │
 │  │  │  :4201 → :80      │  │  :4200 → :80      │             │   │
 │  │  └──────────────────┘  └──────────────────┘             │   │
+│  │                                                          │   │
+│  │  ┌──────────────────────────────────────────────────┐   │   │
+│  │  │  Meilisearch  :7700  (full-text search)           │   │   │
+│  │  └──────────────────────────────────────────────────┘   │   │
 │  └─────────────────────────────────────────────────────────┘   │
 │                                                                 │
 │  ┌─────────────────────────────────────────────────────────┐   │
@@ -271,10 +288,10 @@ Best for: No local GPU needed, uses smaller Ollama models or CPU inference.
 │  │  │  :27017  │ │  :6379   │ │  :8000       │ │  :3000            │    │ │
 │  │  └──────────┘ └──────────┘ └──────────────┘ └──────────────────┘    │ │
 │  │                                                                       │ │
-│  │  ┌──────────────────┐  ┌──────────────────┐                          │ │
-│  │  │  trendbriefai-web │  │  trendbriefai-ui  │                          │ │
-│  │  │  :80 (public)     │  │  :4200 (admin)    │                          │ │
-│  │  └──────────────────┘  └──────────────────┘                          │ │
+│  │  ┌──────────────────┐  ┌──────────────────┐  ┌──────────────────┐   │ │
+│  │  │  trendbriefai-web │  │  trendbriefai-ui  │  │  Meilisearch     │   │ │
+│  │  │  :80 (public)     │  │  :4200 (admin)    │  │  :7700 (search)  │   │ │
+│  │  └──────────────────┘  └──────────────────┘  └──────────────────┘   │ │
 │  └───────────────────────────────────────────────────────────────────────┘ │
 │                                                                             │
 │  ┌───────────────────────────────────────────────────────────────────────┐ │
@@ -334,19 +351,25 @@ Best for: No local GPU needed, uses smaller Ollama models or CPU inference.
 │  │  → Extract clean article text → content_clean                    │    │
 │  └──────────────────────────────┬──────────────────────────────────┘    │
 │                                 │                                        │
-│  Step 4: QUALITY SCORE                                                   │
+│  Step 4: CONTENT MODERATION                                              │
+│  ┌──────────────────────────────┴──────────────────────────────────┐    │
+│  │  Check source blocklist + content policy filters                 │    │
+│  │  Flagged content → status: 'moderated', skip further processing  │    │
+│  └──────────────────────────────┬──────────────────────────────────┘    │
+│                                 │                                        │
+│  Step 5: QUALITY SCORE                                                   │
 │  ┌──────────────────────────────┴──────────────────────────────────┐    │
 │  │  Check: word count > threshold, has meaningful content           │    │
 │  │  Low quality → status: 'failed', skip further processing         │    │
 │  └──────────────────────────────┬──────────────────────────────────┘    │
 │                                 │                                        │
-│  Step 5: LANGUAGE DETECT + TRANSLATE                                     │
+│  Step 6: LANGUAGE DETECT + TRANSLATE                                     │
 │  ┌──────────────────────────────┴──────────────────────────────────┐    │
 │  │  langdetect → check if Vietnamese                                │    │
 │  │  If non-Vietnamese → Ollama translate to Vietnamese               │    │
 │  └──────────────────────────────┬──────────────────────────────────┘    │
 │                                 │                                        │
-│  Step 6: SUMMARIZE (Ollama LLM)                                         │
+│  Step 7: SUMMARIZE (Ollama LLM)                                         │
 │  ┌──────────────────────────────┴──────────────────────────────────┐    │
 │  │  Ollama API → Generate:                                          │    │
 │  │    • title_ai: AI-rewritten title (≤12 Vietnamese words)         │    │
@@ -354,37 +377,51 @@ Best for: No local GPU needed, uses smaller Ollama models or CPU inference.
 │  │    • reason: "why you should care" sentence                      │    │
 │  └──────────────────────────────┬──────────────────────────────────┘    │
 │                                 │                                        │
-│  Step 7: CLASSIFY (Ollama LLM)                                          │
+│  Step 8: SUMMARY VALIDATION                                              │
+│  ┌──────────────────────────────┴──────────────────────────────────┐    │
+│  │  Validate summary structure: exactly 3 bullets, title ≤12 words  │    │
+│  │  Check for hallucination / empty fields                          │    │
+│  │  Invalid → retry or status: 'failed'                             │    │
+│  └──────────────────────────────┬──────────────────────────────────┘    │
+│                                 │                                        │
+│  Step 9: SENTIMENT ANALYSIS                                              │
+│  ┌──────────────────────────────┴──────────────────────────────────┐    │
+│  │  Analyze article sentiment (positive / neutral / negative)       │    │
+│  │  Store sentiment score for feed ranking and analytics            │    │
+│  └──────────────────────────────┬──────────────────────────────────┘    │
+│                                 │                                        │
+│  Step 10: CLASSIFY (Ollama LLM)                                         │
 │  ┌──────────────────────────────┴──────────────────────────────────┐    │
 │  │  Ollama API → Classify into topic:                               │    │
 │  │  ai | finance | lifestyle | drama | technology | career |        │    │
 │  │  health | entertainment | sport                                  │    │
 │  └──────────────────────────────┬──────────────────────────────────┘    │
 │                                 │                                        │
-│  Step 8: EMBEDDING                                                       │
+│  Step 11: EMBEDDING                                                      │
 │  ┌──────────────────────────────┴──────────────────────────────────┐    │
 │  │  sentence-transformers (all-MiniLM-L6-v2)                        │    │
 │  │  → 384-dimensional float vector                                  │    │
 │  └──────────────────────────────┬──────────────────────────────────┘    │
 │                                 │                                        │
-│  Step 9: DEDUP (Layer 2 — Title Similarity)                              │
+│  Step 12: DEDUP (Layer 2 — Title Similarity)                             │
 │  ┌──────────────────────────────┴──────────────────────────────────┐    │
 │  │  Compare title against recent articles                           │    │
 │  │  If similarity > threshold → mark as duplicate                   │    │
 │  └──────────────────────────────┬──────────────────────────────────┘    │
 │                                 │                                        │
-│  Step 10: DEDUP (Layer 3 — Embedding Cosine)                             │
+│  Step 13: DEDUP (Layer 3 — Embedding Cosine)                             │
 │  ┌──────────────────────────────┴──────────────────────────────────┐    │
 │  │  faiss-cpu → cosine similarity against cluster centroids         │    │
 │  │  If cosine > threshold → assign to existing cluster              │    │
 │  │  Else → create new cluster, set as representative                │    │
 │  └──────────────────────────────┬──────────────────────────────────┘    │
 │                                 │                                        │
-│  Step 11: SAVE TO MONGODB                                                │
+│  Step 14: SAVE TO MONGODB + INDEX IN MEILISEARCH                         │
 │  ┌──────────────────────────────┴──────────────────────────────────┐    │
 │  │  motor (async MongoDB driver)                                    │    │
 │  │  → Insert article with processing_status: 'done'                 │    │
 │  │  → Update cluster if needed                                      │    │
+│  │  meilisearch-js → Index article for full-text search              │    │
 │  └──────────────────────────────┬──────────────────────────────────┘    │
 └──────────────────────────────────┼──────────────────────────────────────┘
                                    │
@@ -407,7 +444,7 @@ Best for: No local GPU needed, uses smaller Ollama models or CPU inference.
 │  → Hot articles in last 24h (by interaction count)                        │
 │                                                                          │
 │  GET /api/search?q=keyword                                                │
-│  → MongoDB text search on title + content                                 │
+│  → Meilisearch full-text search (typo-tolerant, fast)                     │
 └──────────────────────────────────┬───────────────────────────────────────┘
                                    │
                                    ▼
@@ -485,7 +522,7 @@ docker compose ps
 # 8. Database is auto-seeded on first start
 # The database/ folder is mounted to /docker-entrypoint-initdb.d
 # Scripts run alphabetically:
-#   001_init_collections.js  — Creates 9 collections with validation + indexes
+#   001_init_collections.js  — Creates 6 base collections with validation + indexes (19 total at runtime)
 #   002_seed_rss_sources.js  — Seeds 86+ Vietnamese RSS sources
 #   003_seed_topics.js       — Seeds 9 topic categories
 
@@ -577,7 +614,7 @@ The `database/` folder contains initialization scripts that run automatically wi
 
 | Script | What It Does |
 |--------|-------------|
-| `001_init_collections.js` | Creates 9 collections (`users`, `articles`, `clusters`, `bookmarks`, `interactions`, `rss_sources`, `device_tokens`, `notification_logs`, `topics`) with JSON Schema validation and indexes |
+| `001_init_collections.js` | Creates 6 base collections (`users`, `articles`, `clusters`, `bookmarks`, `interactions`, `rss_sources`) with JSON Schema validation and indexes. Additional collections (`topics`, `device_tokens`, `notification_logs`, `ads`, `affiliate_links`, `analytics`, `payments`, `subscriptions`, `reactions`, `referrals`, `article_reports`, `user_activities`, `summary_feedback`) are created automatically by Mongoose models at runtime — 19 collections total |
 | `002_seed_rss_sources.js` | Seeds 86+ Vietnamese news sources across 4 categories (AI: 22, Finance: 24, Lifestyle: 20, Drama: 20) with RSS and HTML scrape configs |
 | `003_seed_topics.js` | Seeds 9 topic categories with keys, labels, Material icons, colors, and display order |
 
@@ -931,6 +968,8 @@ flutter build ipa --release
 | `CRAWL_INTERVAL_MINUTES` | How often the crawl scheduler runs | `10` | ❌ Optional | service |
 | `MONGO_INITDB_DATABASE` | MongoDB initial database name (Docker only) | `trendbriefai` | ❌ Optional | mongo container |
 | `API_URL` | Backend API URL for Angular UI (Docker only) | `http://trendbriefai-service:3000/api` | ❌ Optional | ui container |
+| `MEILI_MASTER_KEY` | Meilisearch master API key | `dev-meili-key` | ✅ Yes (production) | service, meilisearch |
+| `MEILI_URL` | Meilisearch connection URL | `http://localhost:7700` | ❌ Optional | service |
 
 ### Docker Compose Internal Variables
 
@@ -967,6 +1006,7 @@ These are set in `docker-compose.yml` and override `.env` values inside containe
 | **MongoDB** | N/A (internal) | — | — | `mongosh --eval "db.adminCommand('ping')"` every 10s |
 | **Redis** | N/A (internal) | — | — | `redis-cli ping` → `PONG` every 10s |
 | **Ollama** | `http://localhost:11434/api/tags` | GET | JSON with model list | Manual check (not in Docker) |
+| **Meilisearch** | `http://localhost:7700/health` | GET | `200 OK` | `wget --spider http://localhost:7700/health` every 15s |
 | **trendbriefai-web** | `http://localhost:4201` | GET | `200 OK` (HTML) | nginx default (port 80 open) |
 | **trendbriefai-ui** | `http://localhost:4200` | GET | `200 OK` (HTML) | nginx default (port 80 open) |
 
@@ -1312,6 +1352,7 @@ docker compose up -d --scale trendbriefai-service=2
 | 8000 | trendbriefai-engine | AI engine (internal) |
 | 27017 | MongoDB | Database (internal) |
 | 6379 | Redis | Cache/Queue (internal) |
+| 7700 | Meilisearch | Full-text search (internal) |
 | 11434 | Ollama | LLM inference (host only) |
 
 ---

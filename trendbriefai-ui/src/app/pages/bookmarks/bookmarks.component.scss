@@ -1,0 +1,170 @@
+.bookmarks-page { max-width: 900px; margin: 0 auto; }
+
+.page-title {
+  font-size: var(--text-xl);
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: var(--space-5);
+  animation: fadeInUp var(--duration-slow) var(--ease-out) both;
+}
+
+.card-grid {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.article-card {
+  background: #fff;
+  border-radius: var(--radius-lg);
+  padding: var(--space-5);
+  box-shadow: var(--shadow-sm);
+  transition: all var(--duration-normal) var(--ease-out);
+  border: 1px solid transparent;
+}
+.article-card:hover {
+  box-shadow: var(--shadow-lg);
+  transform: translateY(-2px);
+  border-color: var(--border);
+}
+
+.animate-card {
+  animation: fadeInUp var(--duration-slow) var(--ease-out) both;
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-3);
+}
+
+.remove-btn {
+  background: none;
+  border: 1px solid #fecaca;
+  border-radius: var(--radius-sm);
+  color: #ef4444;
+  font-size: 13px;
+  width: 32px;
+  height: 32px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--duration-fast);
+}
+.remove-btn:hover { background: #fef2f2; border-color: #ef4444; }
+.remove-btn:active { transform: scale(0.9); }
+
+.card-title {
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: var(--space-3);
+  line-height: 1.4;
+}
+
+.bullets { padding-left: 18px; margin-bottom: var(--space-3); }
+.bullets li {
+  font-size: 14px;
+  color: var(--text-secondary);
+  line-height: 1.7;
+  margin-bottom: var(--space-1);
+}
+
+.reason {
+  font-size: var(--text-sm);
+  color: var(--accent);
+  background: var(--accent-soft);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  margin-bottom: var(--space-3);
+  border-left: 3px solid var(--accent);
+}
+
+.card-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--border);
+}
+.source { font-size: var(--text-xs); color: var(--text-muted); }
+.read-link {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--accent);
+  text-decoration: none;
+  position: relative;
+}
+.read-link::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  width: 0;
+  height: 2px;
+  background: var(--accent);
+  transition: width var(--duration-normal) var(--ease-out);
+  border-radius: 1px;
+}
+.read-link:hover::after { width: 100%; }
+
+/* ── Empty State ── */
+.empty-state {
+  text-align: center;
+  padding: 64px var(--space-4);
+  animation: fadeIn var(--duration-slow) ease-out;
+}
+.empty-icon { font-size: 48px; margin-bottom: var(--space-4); opacity: 0.6; }
+.empty-state h3 {
+  font-size: var(--text-lg);
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: var(--space-2);
+}
+.empty-state p {
+  font-size: 14px;
+  color: var(--text-muted);
+  margin-bottom: var(--space-5);
+}
+.empty-cta {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--accent);
+}
+.empty-cta:hover { text-decoration: underline; }
+
+/* ── Pagination ── */
+.pagination { text-align: center; margin-top: var(--space-6); }
+.load-more-btn {
+  padding: 12px 40px;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all var(--duration-normal) var(--ease-out);
+  font-family: inherit;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.load-more-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  box-shadow: 0 4px 12px var(--accent-glow);
+}
+.load-more-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+  display: inline-block;
+}

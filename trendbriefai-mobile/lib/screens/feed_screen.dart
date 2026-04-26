@@ -43,8 +43,25 @@ class _FeedScreenState extends State<FeedScreen> {
   Future<void> _checkConnectivity() async {
     Connectivity().onConnectivityChanged.listen((results) {
       final offline = results.every((r) => r == ConnectivityResult.none);
-      if (mounted) setState(() => _isOffline = offline);
+      if (mounted) {
+        final wasOffline = _isOffline;
+        setState(() => _isOffline = offline);
+        // Sync pending bookmarks on reconnect
+        if (wasOffline && !offline) {
+          _syncPendingBookmarks();
+        }
+      }
     });
+  }
+
+  Future<void> _syncPendingBookmarks() async {
+    try {
+      final pending = await _cache.getPendingBookmarks();
+      for (final p in pending) {
+        await _api.addBookmark(p['article_id'] as String);
+      }
+      await _cache.clearPendingBookmarks();
+    } catch (_) {}
   }
 
   Future<void> _loadTrending() async {
@@ -62,8 +79,9 @@ class _FeedScreenState extends State<FeedScreen> {
         topic: _selectedTopic == 'all' ? null : _selectedTopic,
         page: pageKey,
       );
-      // Cache first page
+      // Cache articles in SQLite for offline reading
       if (pageKey == 1) {
+        _cache.cacheArticles(response.items).catchError((_) {});
         _cache.cacheFeedPage(_selectedTopic, 1, {
           'items': response.items.map((e) => e.toJson()).toList(),
           'hasMore': response.hasMore,
@@ -75,8 +93,19 @@ class _FeedScreenState extends State<FeedScreen> {
         _pagingController.appendLastPage(response.items);
       }
     } catch (e) {
-      // Try cache on failure
+      // Try SQLite cache on failure (offline reading)
       if (pageKey == 1) {
+        try {
+          final offlineArticles = await _cache.getCachedArticles(
+            topic: _selectedTopic == 'all' ? null : _selectedTopic,
+          );
+          if (offlineArticles.isNotEmpty) {
+            _pagingController.appendLastPage(offlineArticles);
+            return;
+          }
+        } catch (_) {}
+
+        // Fallback to Hive cache
         final cached = _cache.getCachedFeedPage(_selectedTopic, 1);
         if (cached != null) {
           final items = (cached['items'] as List).map((e) => FeedItem.fromJson(e)).toList();
@@ -101,6 +130,12 @@ class _FeedScreenState extends State<FeedScreen> {
 
   void _toggleBookmark(FeedItem item) async {
     try {
+      if (_isOffline) {
+        // Save pending bookmark for sync when online
+        await _cache.addPendingBookmark(item.id);
+        setState(() => item.isBookmarked = !item.isBookmarked);
+        return;
+      }
       if (item.isBookmarked) {
         await _api.removeBookmark(item.id);
       } else {
@@ -125,13 +160,13 @@ class _FeedScreenState extends State<FeedScreen> {
           Container(
             width: double.infinity,
             padding: const EdgeInsets.symmetric(vertical: 6),
-            color: Colors.red.shade700,
+            color: Colors.orange.shade700,
             child: const Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Icon(Icons.wifi_off, color: Colors.white, size: 16),
                 SizedBox(width: 8),
-                Text('Không có kết nối mạng', style: TextStyle(color: Colors.white, fontSize: 13)),
+                Text('Đang offline — hiển thị bài đã lưu', style: TextStyle(color: Colors.white, fontSize: 13)),
               ],
             ),
           ),

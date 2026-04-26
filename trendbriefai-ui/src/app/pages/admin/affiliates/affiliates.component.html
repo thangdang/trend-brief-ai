@@ -1,0 +1,37 @@
+<div class="admin-page">
+      <h2>🔗 Quản lý Affiliate</h2>
+
+      <div class="add-form">
+        <h3>Thêm link affiliate</h3>
+        <div class="form-row">
+          <input placeholder="Tiêu đề" [(ngModel)]="form.title" />
+          <input placeholder="URL" [(ngModel)]="form.url" />
+          <select [(ngModel)]="form.topic">
+            <option value="ai">AI</option><option value="finance">Finance</option>
+            <option value="lifestyle">Lifestyle</option><option value="drama">Drama</option>
+          </select>
+          <input placeholder="Provider" [(ngModel)]="form.provider" />
+          <input placeholder="Commission" [(ngModel)]="form.commission" />
+          <button (click)="create()">Thêm</button>
+        </div>
+      </div>
+
+      <table class="data-table">
+        <thead>
+          <tr><th>Tiêu đề</th><th>Provider</th><th>Topic</th><th>Clicks</th><th>Impressions</th><th>Conversions</th><th>Active</th></tr>
+        </thead>
+        <tbody>
+          @for (link of links(); track link._id) {
+            <tr>
+              <td>{{ link.title }}</td>
+              <td>{{ link.provider }}</td>
+              <td>{{ link.topic }}</td>
+              <td>{{ link.clicks }}</td>
+              <td>{{ link.impressions }}</td>
+              <td>{{ link.conversions }}</td>
+              <td>{{ link.is_active ? '✅' : '❌' }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>

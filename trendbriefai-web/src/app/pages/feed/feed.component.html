@@ -2,60 +2,159 @@
   <h2 class="page-title">{{ topic()!.toUpperCase() }}</h2>
 }
 
-<!-- Trending (only on main feed, first load) -->
-@if (!topic() && !cursor() && trending().length > 0) {
-  <section class="trending">
-    <h2 class="section-title">🔥 Đang hot</h2>
-    <div class="trending-row">
-      @for (item of trending(); track item.id) {
-        <a [routerLink]="'/article/' + item.id" class="trending-card">
-          <span class="badge" [class]="'t-' + item.topic">{{ item.topic }}</span>
-          <h4>{{ item.titleAi }}</h4>
-          <span class="meta">{{ item.source }}</span>
-        </a>
-      }
-    </div>
-  </section>
+<!-- Skeleton Loading -->
+@if (loading() && items().length === 0) {
+  <!-- Trending skeleton -->
+  @if (!topic()) {
+    <section class="trending">
+      <div class="section-title-row">
+        <div class="skeleton skeleton-line h-lg w-30"></div>
+      </div>
+      <div class="trending-row">
+        @for (i of [1,2,3,4]; track i) {
+          <div class="trending-card skeleton-card">
+            <div class="skeleton skeleton-line w-30" style="height:18px"></div>
+            <div class="skeleton skeleton-line w-full h-lg" style="margin-top:10px"></div>
+            <div class="skeleton skeleton-line w-60"></div>
+            <div class="skeleton skeleton-line w-40" style="height:10px"></div>
+          </div>
+        }
+      </div>
+    </section>
+  }
+  <!-- Feed skeleton -->
+  <div class="articles">
+    @for (i of [1,2,3]; track i) {
+      <article class="card skeleton-card" [style.animation-delay]="(i * 50) + 'ms'">
+        <div class="card-top">
+          <div class="skeleton skeleton-line w-30" style="height:18px;margin:0"></div>
+          <div class="skeleton skeleton-line w-40" style="height:12px;margin:0"></div>
+        </div>
+        <div class="skeleton skeleton-line h-img w-full"></div>
+        <div class="skeleton skeleton-line w-80 h-lg"></div>
+        <div class="skeleton skeleton-line w-full"></div>
+        <div class="skeleton skeleton-line w-full"></div>
+        <div class="skeleton skeleton-line w-60"></div>
+      </article>
+    }
+  </div>
 }
 
-<!-- Articles -->
-<div class="articles">
-  @for (item of items(); track item.id) {
-    <article class="card">
-      <div class="card-top">
-        <span class="badge" [class]="'t-' + item.topic">{{ item.topic }}</span>
-        <span class="meta">{{ item.source }} · {{ item.publishedAt | date:'dd/MM/yyyy HH:mm' }}</span>
-      </div>
-      @if (item.imageUrl) {
-        <img [src]="item.imageUrl" [alt]="item.titleAi || item.titleOriginal" class="card-image" loading="lazy" />
-      }
-      <a [routerLink]="'/article/' + item.id" class="card-title">{{ item.titleAi || item.titleOriginal }}</a>
-      <ul class="bullets">
-        @for (b of item.summaryBullets; track $index) {
-          <li>{{ b }}</li>
+<!-- Trending (only on main feed, first load) -->
+@if (!loading() || items().length > 0) {
+  @if (!topic() && !cursor() && trending().length > 0) {
+    <section class="trending">
+      <h2 class="section-title">🔥 Đang hot</h2>
+      <div class="trending-row">
+        @for (item of trending(); track item.id; let idx = $index) {
+          <a [routerLink]="'/article/' + item.id" class="trending-card" [style.animation-delay]="(idx * 60) + 'ms'">
+            @if (idx < 3) {
+              <span class="trending-rank rank-{{ idx + 1 }}">{{ idx + 1 }}</span>
+            }
+            <span class="badge" [class]="'t-' + item.topic">{{ item.topic }}</span>
+            <h4>{{ item.titleAi }}</h4>
+            <span class="meta">{{ item.source }}</span>
+          </a>
         }
-      </ul>
-      @if (item.reason) {
-        <p class="reason">💡 {{ item.reason }}</p>
-      }
-      <div class="card-bottom">
-        <a [routerLink]="'/article/' + item.id" class="read-more">Đọc chi tiết →</a>
-        <a [href]="item.url" target="_blank" rel="noopener" class="original-link">Bài gốc ↗</a>
       </div>
-    </article>
+    </section>
   }
-</div>
 
-@if (loading()) {
-  <div class="loading">Đang tải...</div>
+  <!-- Articles -->
+  <div class="articles">
+    @for (item of items(); track item.id; let idx = $index) {
+      <article class="card animate-card" [style.animation-delay]="(idx * 50) + 'ms'"
+        (mouseenter)="showTooltip(item, $event)" (mouseleave)="hideTooltip()">
+        <div class="card-top">
+          <span class="badge" [class]="'t-' + item.topic">{{ item.topic }}</span>
+          @if (item.sentiment && item.sentiment !== 'neutral') {
+            <span class="sentiment-badge" [class]="'s-' + item.sentiment">
+              {{ item.sentiment === 'positive' ? '😊' : '😟' }}
+            </span>
+          }
+          <span class="meta">{{ item.source }} · {{ item.publishedAt | date:'dd/MM/yyyy HH:mm' }}</span>
+        </div>
+        @if (item.imageUrl) {
+          <div class="card-image-wrapper">
+            <img [src]="item.imageUrl" [alt]="item.titleAi || item.titleOriginal || 'Ảnh bài viết'" class="card-image" loading="lazy" />
+          </div>
+        }
+        <a [routerLink]="'/article/' + item.id" class="card-title" [attr.aria-label]="'Đọc: ' + (item.titleAi || item.titleOriginal)">{{ item.titleAi || item.titleOriginal }}</a>
+        <ul class="bullets" role="list" aria-label="Tóm tắt">
+          @for (b of item.summaryBullets; track $index) {
+            <li>{{ b }}</li>
+          }
+        </ul>
+        @if (item.reason) {
+          <p class="reason">💡 {{ item.reason }}</p>
+        }
+        <div class="card-bottom">
+          <a [routerLink]="'/article/' + item.id" class="read-more">Đọc chi tiết →</a>
+          <div class="feedback-buttons">
+            <button class="fb-btn" (click)="rateSummary(item.id, 'up'); $event.stopPropagation()" title="Tóm tắt tốt" aria-label="Tóm tắt tốt">👍</button>
+            <button class="fb-btn" (click)="rateSummary(item.id, 'down'); $event.stopPropagation()" title="Tóm tắt chưa tốt" aria-label="Tóm tắt chưa tốt">👎</button>
+          </div>
+          <a [href]="item.url" target="_blank" rel="noopener" class="original-link">Bài gốc ↗</a>
+        </div>
+      </article>
+    }
+  </div>
+}
+
+@if (loading() && items().length > 0) {
+  <div class="loading-more">
+    <span class="spinner"></span>
+    <span>Đang tải thêm...</span>
+  </div>
 }
 
 @if (items().length === 0 && !loading()) {
-  <div class="empty">Chưa có bài viết nào.</div>
+  @if (error()) {
+    <div class="error-state">
+      <div class="error-icon">⚠️</div>
+      <h3>Không thể tải bài viết</h3>
+      <p>Kiểm tra kết nối mạng và thử lại.</p>
+      <button class="retry-btn" (click)="retryLoad()">🔄 Thử lại</button>
+    </div>
+  } @else {
+    <div class="empty-state">
+      <div class="empty-icon">📰</div>
+      <h3>Chưa có bài viết nào</h3>
+      <p>Hãy thử chọn chủ đề khác hoặc quay lại sau nhé.</p>
+    </div>
+  }
 }
 
-@if (hasMore() && !loading()) {
+<!-- Infinite scroll sentinel -->
+<div #sentinel style="height: 1px;"></div>
+
+@if (loading()) {
   <div class="load-more">
-    <button (click)="loadMore()">Tải thêm</button>
+    <div class="loading-spinner"></div>
+  </div>
+}
+
+@if (!hasMore() && items().length > 0) {
+  <div class="end-of-feed">
+    <span>🎉 Bạn đã đọc hết bài viết</span>
+  </div>
+}
+
+<!-- Scroll to top button -->
+@if (showScrollTop()) {
+  <button class="scroll-top-btn" (click)="scrollToTop()" aria-label="Lên đầu trang">↑</button>
+}
+
+<!-- Hover tooltip (desktop only) -->
+@if (tooltipItem() && tooltipPos()) {
+  <div class="card-tooltip visible"
+    [style.top.px]="tooltipPos()!.top"
+    [style.left.px]="tooltipPos()!.left">
+    <strong>{{ tooltipItem()!.titleAi }}</strong>
+    <ul>
+      @for (b of tooltipItem()!.summaryBullets; track b) {
+        <li>{{ b }}</li>
+      }
+    </ul>
   </div>
 }

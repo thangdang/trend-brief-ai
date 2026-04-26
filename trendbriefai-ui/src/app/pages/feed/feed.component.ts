@@ -13,7 +13,7 @@ interface TopicTab {
   standalone: true,
   imports: [FormsModule],
   templateUrl: './feed.component.html',
-  styleUrls: ['./feed.component.css'],
+  styleUrl: './feed.component.scss',
 })
 export class FeedComponent implements OnInit {
   private api = inject(ApiService);

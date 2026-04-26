@@ -1,0 +1,77 @@
+<div class="admin-page">
+      <h2>📡 Quản lý nguồn tin</h2>
+
+      <div class="tab-bar">
+        <button [class.active]="activeTab() === 'manage'" (click)="activeTab.set('manage')">📋 Quản lý</button>
+        <button [class.active]="activeTab() === 'health'" (click)="activeTab.set('health'); loadHealth()">🏥 Sức khỏe</button>
+      </div>
+
+      @if (activeTab() === 'health' && healthData()) {
+        <div class="health-summary">
+          <div class="stat-card"><div class="stat-value">{{ healthData().summary.total }}</div><div class="stat-label">Tổng</div></div>
+          <div class="stat-card"><div class="stat-value" style="color:#22c55e">{{ healthData().summary.active }}</div><div class="stat-label">Active</div></div>
+          <div class="stat-card"><div class="stat-value" style="color:#f59e0b">{{ healthData().summary.degraded }}</div><div class="stat-label">Degraded</div></div>
+          <div class="stat-card"><div class="stat-value" style="color:#ef4444">{{ healthData().summary.disabled }}</div><div class="stat-label">Disabled</div></div>
+        </div>
+        <table class="data-table">
+          <thead><tr><th>Tên</th><th>Loại</th><th>Success Rate</th><th>Failures</th><th>Status</th><th>Last Crawl</th></tr></thead>
+          <tbody>
+            @for (s of healthData().sources; track s._id) {
+              <tr>
+                <td>{{ s.name }}</td>
+                <td>{{ s.source_type }}</td>
+                <td><span [style.color]="s.health.success_rate >= 0.8 ? '#22c55e' : s.health.success_rate >= 0.5 ? '#f59e0b' : '#ef4444'">{{ (s.health.success_rate * 100).toFixed(0) }}%</span></td>
+                <td>{{ s.health.consecutive_failures }}</td>
+                <td>
+                  <span *ngIf="s.health.auto_disabled" style="color:#ef4444">🔴 Disabled</span>
+                  <span *ngIf="!s.health.auto_disabled && s.is_active" style="color:#22c55e">🟢 Active</span>
+                  <span *ngIf="!s.health.auto_disabled && !s.is_active" style="color:#94a3b8">⚪ Inactive</span>
+                </td>
+                <td>{{ s.last_crawled_at ? (s.last_crawled_at | date:'short') : '-' }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      }
+
+      @if (activeTab() === 'manage') {
+      <div class="add-form">
+        <h3>{{ editingId ? 'Sửa nguồn' : 'Thêm nguồn mới' }}</h3>
+        <div class="form-row">
+          <input placeholder="Tên nguồn" [(ngModel)]="form.name" />
+          <input placeholder="URL" [(ngModel)]="form.url" />
+          <select [(ngModel)]="form.source_type">
+            <option value="rss">RSS</option>
+            <option value="html_scrape">HTML Scrape</option>
+            <option value="api">API</option>
+          </select>
+          <input type="number" placeholder="Interval (min)" [(ngModel)]="form.crawl_interval_minutes" />
+          <button (click)="save()">{{ editingId ? 'Cập nhật' : 'Thêm' }}</button>
+          <button *ngIf="editingId" (click)="cancelEdit()">Hủy</button>
+        </div>
+      </div>
+
+      <table class="data-table">
+        <thead>
+          <tr><th>Tên</th><th>URL</th><th>Loại</th><th>Trạng thái</th><th>Crawl gần nhất</th><th>Thao tác</th></tr>
+        </thead>
+        <tbody>
+          @for (s of sources(); track s._id) {
+            <tr>
+              <td>{{ s.name }}</td>
+              <td class="url-cell">{{ s.url }}</td>
+              <td>{{ s.source_type }}</td>
+              <td><span [class]="s.is_active ? 'badge-active' : 'badge-inactive'">{{ s.is_active ? 'Active' : 'Inactive' }}</span></td>
+              <td>{{ s.last_crawled_at ? (s.last_crawled_at | date:'short') : 'Chưa crawl' }}</td>
+              <td class="actions">
+                <button (click)="edit(s)">✏️</button>
+                <button (click)="toggleActive(s)">{{ s.is_active ? '⏸' : '▶️' }}</button>
+                <button (click)="crawlNow(s._id)">🔄 Crawl</button>
+                <button (click)="remove(s._id)" class="btn-danger">🗑</button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+      }
+    </div>

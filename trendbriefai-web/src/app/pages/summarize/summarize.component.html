@@ -1,0 +1,63 @@
+<div class="summarize-page">
+  <h1 class="page-title">🔗 Tóm tắt cho tôi</h1>
+  <p class="page-desc">Paste bất kỳ URL bài viết nào — AI sẽ tóm tắt trong 30 giây.</p>
+
+  <div class="input-row">
+    <input
+      type="url"
+      class="url-input"
+      [(ngModel)]="url"
+      placeholder="https://vnexpress.net/bai-viet-bat-ky..."
+      (keydown.enter)="summarize()"
+      [disabled]="loading()"
+    />
+    <button class="summarize-btn" (click)="summarize()" [disabled]="!url.trim() || loading()">
+      @if (loading()) {
+        <span class="btn-spinner"></span> Đang tóm tắt...
+      } @else {
+        🚀 Tóm tắt
+      }
+    </button>
+  </div>
+
+  @if (error()) {
+    <div class="error-msg">{{ error() }}</div>
+  }
+
+  @if (loading()) {
+    <div class="result-card skeleton-card">
+      <div class="skeleton skeleton-line h-xl w-80"></div>
+      <div class="skeleton skeleton-line w-full" style="margin-top:16px"></div>
+      <div class="skeleton skeleton-line w-full"></div>
+      <div class="skeleton skeleton-line w-60"></div>
+      <div class="skeleton skeleton-line w-40" style="margin-top:16px"></div>
+    </div>
+  }
+
+  @if (result(); as r) {
+    <div class="result-card">
+      <div class="result-topic">
+        <span class="topic-badge">{{ r.topic }}</span>
+      </div>
+      <h2 class="result-title">{{ r.title_ai }}</h2>
+      <ul class="result-bullets">
+        @for (b of r.summary_bullets; track b) {
+          <li>{{ b }}</li>
+        }
+      </ul>
+      <div class="result-reason">
+        <span class="reason-label">💡 Vì sao bạn nên quan tâm:</span>
+        <p>{{ r.reason }}</p>
+      </div>
+      <div class="result-actions">
+        <button class="action-btn" (click)="copyResult()">📋 Copy</button>
+        <button class="action-btn" (click)="shareResult()">↗ Chia sẻ</button>
+        <a [href]="r.source_url" target="_blank" class="action-btn">🔗 Bài gốc</a>
+      </div>
+    </div>
+  }
+
+  <div class="back-link-row">
+    <a routerLink="/feed" class="back-link">← Về bảng tin</a>
+  </div>
+</div>

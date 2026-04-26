@@ -163,4 +163,88 @@ router.post('/users/:id/suspend', authMiddleware, async (req: Request, res: Resp
   }
 });
 
+// GET /api/admin/metrics — crawl pipeline metrics dashboard
+router.get('/metrics', authMiddleware, async (_req: Request, res: Response) => {
+  try {
+    const { Article } = require('../models/Article');
+    const { RssSource } = require('../models/RssSource');
+    const since24h = new Date(Date.now() - 24 * 60 * 60 * 1000);
+
+    const [byStatus, byProvider, sourceHealth, totalArticles] = await Promise.all([
+      Article.aggregate([
+        { $match: { created_at: { $gte: since24h } } },
+        { $group: { _id: '$processing_status', count: { $sum: 1 } } },
+      ]),
+      Article.aggregate([
+        { $match: { created_at: { $gte: since24h }, ai_provider: { $exists: true } } },
+        { $group: { _id: '$ai_provider', count: { $sum: 1 } } },
+      ]),
+      RssSource.aggregate([
+        { $group: {
+          _id: null,
+          total: { $sum: 1 },
+          active: { $sum: { $cond: [{ $and: ['$is_active', { $not: '$health.auto_disabled' }] }, 1, 0] } },
+          disabled: { $sum: { $cond: ['$health.auto_disabled', 1, 0] } },
+        }},
+      ]),
+      Article.countDocuments({ created_at: { $gte: since24h } }),
+    ]);
+
+    const statusMap: Record<string, number> = {};
+    byStatus.forEach((s: any) => { statusMap[s._id || 'unknown'] = s.count; });
+
+    const providerMap: Record<string, number> = {};
+    byProvider.forEach((p: any) => { providerMap[p._id || 'unknown'] = p.count; });
+
+    const sh = sourceHealth[0] || { total: 0, active: 0, disabled: 0 };
+    const successCount = (statusMap['done'] || 0) + (statusMap['cached'] || 0);
+
+    res.json({
+      articles: {
+        processed_24h: totalArticles,
+        success_rate: totalArticles > 0 ? Math.round((successCount / totalArticles) * 100) / 100 : 0,
+        by_status: statusMap,
+        by_provider: providerMap,
+      },
+      sources: {
+        total: sh.total,
+        active: sh.active,
+        disabled: sh.disabled,
+        degraded: sh.total - sh.active - sh.disabled,
+      },
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch metrics' });
+  }
+});
+
+// GET /api/admin/sources/health — source health dashboard
+router.get('/sources/health', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const { RssSource } = require('../models/RssSource');
+    const sources = await RssSource.find({}).sort({ 'health.success_rate': 1 }).lean();
+    const summary = {
+      total: sources.length,
+      active: sources.filter((s: any) => s.is_active && !s.health?.auto_disabled).length,
+      disabled: sources.filter((s: any) => s.health?.auto_disabled).length,
+      degraded: sources.filter((s: any) => s.health?.success_rate < 0.5 && !s.health?.auto_disabled).length,
+    };
+    res.json({
+      summary,
+      sources: sources.map((s: any) => ({
+        _id: s._id,
+        name: s.name,
+        url: s.url,
+        source_type: s.source_type,
+        is_active: s.is_active,
+        category: s.category,
+        last_crawled_at: s.last_crawled_at,
+        health: s.health || { success_rate: 1, consecutive_failures: 0, auto_disabled: false },
+      })),
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch source health' });
+  }
+});
+
 export default router;

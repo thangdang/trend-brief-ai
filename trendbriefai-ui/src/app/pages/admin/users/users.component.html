@@ -1,0 +1,30 @@
+<div class="admin-page">
+      <h2>👥 Quản lý người dùng</h2>
+
+      <table class="data-table">
+        <thead>
+          <tr><th>Email</th><th>Interests</th><th>Notifications</th><th>Onboarded</th><th>Ngày tạo</th><th>Thao tác</th></tr>
+        </thead>
+        <tbody>
+          @for (u of users(); track u._id) {
+            <tr>
+              <td>{{ u.email }}</td>
+              <td>{{ u.interests?.join(', ') || '—' }}</td>
+              <td>{{ u.notifications_enabled ? '✅' : '❌' }}</td>
+              <td>{{ u.onboarding_completed ? '✅' : '❌' }}</td>
+              <td>{{ u.created_at | date:'shortDate' }}</td>
+              <td class="actions">
+                <button (click)="ban(u._id)">🚫 Ban</button>
+                <button (click)="suspend(u._id)">⏸ Suspend</button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+
+      <div class="pagination" *ngIf="totalPages() > 1">
+        <button [disabled]="page === 1" (click)="goPage(page - 1)">← Trước</button>
+        <span>Trang {{ page }} / {{ totalPages() }}</span>
+        <button [disabled]="page >= totalPages()" (click)="goPage(page + 1)">Sau →</button>
+      </div>
+    </div>

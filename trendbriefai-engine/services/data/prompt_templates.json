@@ -1,0 +1,26 @@
+{
+  "_version": "1.0",
+  "_description": "Topic-specific prompt templates for AI summarization. Each topic has a tailored tone and focus.",
+
+  "default": "Tóm tắt bài viết sau thành:\n- 1 tiêu đề ngắn (<=12 từ), bắt đầu bằng \"TITLE:\"\n- 3 bullet chính, mỗi bullet bắt đầu bằng \"- \"\n- 1 câu trả lời: Vì sao bạn nên quan tâm, bắt đầu bằng \"REASON:\"\n\nTone: trẻ, dễ hiểu\n\nBài viết:\n{text}",
+
+  "ai": "Tóm tắt bài viết công nghệ/AI sau:\n- TITLE: tiêu đề ngắn (<=12 từ), focus vào ứng dụng thực tế hoặc breakthrough\n- 3 bullet: công nghệ gì, ai phát triển, ảnh hưởng thế nào đến cuộc sống\n- REASON: tác động đến công việc hoặc cuộc sống hàng ngày\n\nTone: tech-savvy nhưng dễ hiểu, không quá chuyên môn\n\nBài viết:\n{text}",
+
+  "finance": "Tóm tắt bài viết tài chính/kinh tế sau:\n- TITLE: tiêu đề ngắn (<=12 từ), focus vào con số hoặc tác động quan trọng\n- 3 bullet: số liệu chính, nguyên nhân, tác động đến ví tiền người đọc\n- REASON: liên hệ trực tiếp đến tài chính cá nhân của người đọc\n\nTone: chuyên nghiệp nhưng dễ hiểu, tránh thuật ngữ phức tạp\n\nBài viết:\n{text}",
+
+  "lifestyle": "Tóm tắt bài viết đời sống sau:\n- TITLE: tiêu đề ngắn (<=12 từ), gợi cảm hứng hoặc tips hữu ích\n- 3 bullet: thông tin chính, tips actionable, lưu ý quan trọng\n- REASON: vì sao thông tin này hữu ích cho cuộc sống hàng ngày\n\nTone: thân thiện, gần gũi, dễ áp dụng\n\nBài viết:\n{text}",
+
+  "drama": "Tóm tắt tin giải trí/drama sau:\n- TITLE: tiêu đề ngắn (<=12 từ), gây tò mò, mention nhân vật chính\n- 3 bullet: ai liên quan, chuyện gì xảy ra, phản ứng cộng đồng\n- REASON: vì sao đây là hot topic đáng theo dõi\n\nTone: trẻ trung, hóng hớt nhẹ nhàng, không toxic\n\nBài viết:\n{text}",
+
+  "career": "Tóm tắt bài viết nghề nghiệp/career sau:\n- TITLE: tiêu đề ngắn (<=12 từ), focus vào cơ hội hoặc insight\n- 3 bullet: thông tin chính, kỹ năng/mức lương liên quan, cách áp dụng\n- REASON: vì sao thông tin này giúp phát triển sự nghiệp\n\nTone: chuyên nghiệp nhưng motivating, actionable\n\nBài viết:\n{text}",
+
+  "insight": "Tóm tắt bài phân tích/insight sau:\n- TITLE: tiêu đề ngắn (<=12 từ), highlight góc nhìn mới\n- 3 bullet: luận điểm chính, evidence/data, kết luận\n- REASON: vì sao góc nhìn này đáng suy ngẫm\n\nTone: sâu sắc nhưng accessible, kích thích tư duy\n\nBài viết:\n{text}",
+
+  "sport": "Tóm tắt tin thể thao sau:\n- TITLE: tiêu đề ngắn (<=12 từ), focus kết quả hoặc highlight\n- 3 bullet: tỷ số/kết quả, highlight chính, phản ứng\n- REASON: vì sao trận đấu/sự kiện này đáng chú ý\n\nTone: sôi động, hào hứng, dùng ngôn ngữ thể thao\n\nBài viết:\n{text}",
+
+  "health": "Tóm tắt bài viết sức khỏe sau:\n- TITLE: tiêu đề ngắn (<=12 từ), focus vào lời khuyên hoặc phát hiện mới\n- 3 bullet: thông tin chính, evidence/nghiên cứu, cách áp dụng\n- REASON: vì sao thông tin này quan trọng cho sức khỏe bạn\n\nTone: đáng tin cậy, evidence-based, không gây hoang mang\n\nBài viết:\n{text}",
+
+  "entertainment": "Tóm tắt tin giải trí sau:\n- TITLE: tiêu đề ngắn (<=12 từ), fun và catchy\n- 3 bullet: nội dung chính, điểm thú vị, phản ứng cộng đồng\n- REASON: vì sao đây là nội dung giải trí đáng xem\n\nTone: vui vẻ, nhẹ nhàng, entertaining\n\nBài viết:\n{text}",
+
+  "technology": "Tóm tắt bài viết công nghệ sau:\n- TITLE: tiêu đề ngắn (<=12 từ), focus sản phẩm/tính năng mới\n- 3 bullet: sản phẩm gì, tính năng nổi bật, giá/availability\n- REASON: vì sao công nghệ này đáng quan tâm\n\nTone: tech-savvy, thực tế, so sánh được\n\nBài viết:\n{text}"
+}

@@ -1,6 +1,7 @@
 # TrendBrief AI Service Dependencies
 feedparser==6.0.11
 newspaper3k==0.2.8
+trafilatura>=1.8.0
 beautifulsoup4==4.12.3
 transformers==4.44.2
 sentence-transformers==3.0.1

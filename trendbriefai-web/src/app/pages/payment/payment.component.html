@@ -1,0 +1,33 @@
+<div style="max-width:800px;margin:0 auto;padding:2rem 1rem">
+  <h1 style="font-size:1.5rem;font-weight:700;margin-bottom:1.5rem">💎 Nâng cấp TrendBrief Pro</h1>
+
+  <div *ngIf="error" style="background:#fef2f2;color:#dc2626;padding:.75rem;border-radius:8px;margin-bottom:1rem">{{ error }}</div>
+  <div *ngIf="success" style="background:#f0fdf4;color:#16a34a;padding:.75rem;border-radius:8px;margin-bottom:1rem">{{ success }}</div>
+
+  <div *ngIf="subscription" style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:1.5rem;margin-bottom:1.5rem">
+    <h3 style="color:#16a34a;font-weight:600">✅ Gói: {{ subscription.plan }}</h3>
+    <p style="color:#16a34a;margin-top:.5rem">Hết hạn: {{ formatDate(subscription.expires_at) }}</p>
+    <button (click)="cancelSub()" style="margin-top:.75rem;color:#dc2626;background:none;border:none;cursor:pointer;font-size:.875rem">Hủy gói</button>
+  </div>
+
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:1.5rem">
+    <div *ngFor="let plan of plans" style="background:white;border-radius:16px;padding:2rem;text-align:center;box-shadow:0 4px 24px rgba(0,0,0,.08)"
+         [style.border]="plan.id === 'pro_yearly' ? '2px solid #6366f1' : '1px solid #e2e8f0'">
+      <h3 style="font-size:1.2rem;font-weight:600">{{ plan.label }}</h3>
+      <p style="font-size:2rem;font-weight:700;color:#6366f1;margin:1rem 0">{{ formatPrice(plan.price) }}</p>
+      <p style="color:#94a3b8;margin-bottom:1.5rem">{{ plan.durationDays }} ngày</p>
+      <button (click)="subscribe(plan.id, 'momo')" [disabled]="paymentLoading"
+              style="width:100%;background:#d63384;color:white;border:none;padding:12px;border-radius:8px;cursor:pointer;margin-bottom:.75rem;font-size:.9rem">
+        💳 MoMo
+      </button>
+      <button (click)="subscribe(plan.id, 'vnpay')" [disabled]="paymentLoading"
+              style="width:100%;background:#6366f1;color:white;border:none;padding:12px;border-radius:8px;cursor:pointer;font-size:.9rem">
+        🏦 VNPay
+      </button>
+      <button (click)="subscribe(plan.id, 'stripe')" [disabled]="paymentLoading"
+              style="width:100%;background:#1a1a2e;color:white;border:none;padding:12px;border-radius:8px;cursor:pointer;font-size:.9rem;margin-top:.75rem">
+        💳 Stripe (Visa/Master)
+      </button>
+    </div>
+  </div>
+</div>

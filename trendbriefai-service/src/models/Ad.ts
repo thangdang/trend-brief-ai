@@ -39,6 +39,8 @@ const AdSchema = new Schema<IAd>(
     start_date: { type: Date, required: true },
     end_date: { type: Date, required: true },
     impressions: { type: Number, default: 0 },
+    viewable_impressions: { type: Number, default: 0 },
+    viewability_data: { type: [Schema.Types.Mixed], default: [] },
     clicks: { type: Number, default: 0 },
     budget_cents: { type: Number, required: true },
     spent_cents: { type: Number, default: 0 },

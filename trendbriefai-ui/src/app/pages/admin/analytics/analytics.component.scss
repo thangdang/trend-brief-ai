@@ -1,0 +1,12 @@
+.admin-page { padding: 24px; }
+    .metrics-row { display: flex; gap: 16px; margin-bottom: 24px; }
+    .metric-card { background: var(--surface, #f5f5f5); border-radius: 12px; padding: 20px; flex: 1; text-align: center; }
+    .metric-label { font-size: 14px; color: #666; }
+    .metric-value { font-size: 32px; font-weight: 700; margin-top: 4px; }
+    .date-range { display: flex; gap: 12px; align-items: center; margin-bottom: 24px; }
+    .date-range input { padding: 6px 10px; border: 1px solid #ddd; border-radius: 6px; }
+    .date-range button { padding: 8px 16px; background: #6366f1; color: #fff; border: none; border-radius: 6px; cursor: pointer; }
+    .section { margin-bottom: 32px; }
+    .data-table { width: 100%; border-collapse: collapse; }
+    .data-table th, .data-table td { padding: 10px 12px; border-bottom: 1px solid #eee; text-align: left; }
+    .data-table th { background: #f9f9f9; font-weight: 600; }

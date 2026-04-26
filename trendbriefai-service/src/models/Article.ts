@@ -52,7 +52,7 @@ const ArticleSchema = new Schema<IArticle>(
     content_clean: String,
     topic: {
       type: String,
-      enum: ['ai', 'finance', 'lifestyle', 'drama', 'career', 'insight'],
+      enum: ['ai', 'finance', 'lifestyle', 'drama', 'career', 'insight', 'technology', 'health', 'entertainment', 'sport'],
     },
     image_url: String,
     source: {
@@ -80,6 +80,9 @@ const ArticleSchema = new Schema<IArticle>(
     sponsor_name: { type: String },
     sponsor_url: { type: String },
     report_count: { type: Number, default: 0 },
+    feed_score: { type: Number, default: 0 },
+    quality_score: { type: Number },
+    ai_provider: { type: String },
   },
   {
     timestamps: { createdAt: 'created_at', updatedAt: false },
@@ -90,6 +93,9 @@ ArticleSchema.index({ topic: 1 });
 ArticleSchema.index({ created_at: -1 });
 ArticleSchema.index({ source: 1 });
 ArticleSchema.index({ processing_status: 1 });
+ArticleSchema.index({ feed_score: -1 });
+ArticleSchema.index({ processing_status: 1, feed_score: -1 });
+ArticleSchema.index({ processing_status: 1, topic: 1, feed_score: -1 });
 ArticleSchema.index({ title_original: 'text', title_ai: 'text' });
 
 export const Article = mongoose.model<IArticle>('Article', ArticleSchema);

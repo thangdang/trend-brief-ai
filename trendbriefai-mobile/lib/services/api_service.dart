@@ -99,8 +99,59 @@ class ApiService {
     return tokens;
   }
 
+  Future<AuthTokens> googleLogin(String idToken) async {
+    final response = await _dio.post('/auth/google', data: {
+      'idToken': idToken,
+    });
+    final tokens = AuthTokens.fromJson(response.data);
+    await _saveTokens(tokens);
+    return tokens;
+  }
+
+  Future<AuthTokens> appleLogin(String idToken, {String? name}) async {
+    final data = <String, dynamic>{'idToken': idToken};
+    if (name != null) data['user'] = {'name': name};
+    final response = await _dio.post('/auth/apple', data: data);
+    final tokens = AuthTokens.fromJson(response.data);
+    await _saveTokens(tokens);
+    return tokens;
+  }
+
   Future<void> logout() async {
     await clearTokens();
+  }
+
+  // --- Payment ---
+
+  Future<List<dynamic>> getPaymentPlans() async {
+    final response = await _dio.get('/payment/plans');
+    return response.data['plans'] as List<dynamic>;
+  }
+
+  Future<Map<String, dynamic>> createPayment(String plan, String method) async {
+    final response = await _dio.post('/payment/create', data: {
+      'plan': plan,
+      'method': method,
+    });
+    return Map<String, dynamic>.from(response.data);
+  }
+
+  Future<Map<String, dynamic>> verifyMobileReceipt(String plan, String method, String receipt) async {
+    final response = await _dio.post('/payment/verify-mobile', data: {
+      'plan': plan,
+      'method': method,
+      'receipt': receipt,
+    });
+    return Map<String, dynamic>.from(response.data);
+  }
+
+  Future<Map<String, dynamic>> getSubscription() async {
+    final response = await _dio.get('/payment/subscription');
+    return Map<String, dynamic>.from(response.data);
+  }
+
+  Future<void> cancelSubscription() async {
+    await _dio.post('/payment/cancel');
   }
 
   // --- Feed ---

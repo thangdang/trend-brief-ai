@@ -16,6 +16,7 @@ from services.cleaner import extract_and_clean
 from services.summarizer import generate_summary
 from services.classifier import classify_topic
 from services.dedup import deduplicate_article, url_hash
+from services.rate_limiter import wait_for_domain
 from services.quality_scorer import ContentQualityScorer
 from services.content_moderator import ContentModerator
 from services.translator import ensure_vietnamese
@@ -58,9 +59,8 @@ async def _process_single_article(
         try:
             articles_col = db["articles"]
 
-            # Rate limit: acquire lock, sleep, release
-            async with rate_limiter:
-                await asyncio.sleep(rate_delay)
+            # Rate limit: per-domain delay (replaces global lock)
+            await wait_for_domain(entry_url)
 
             # Step 1: Quick URL hash dedup (O(1) skip)
             hash_val = url_hash(entry_url)
@@ -131,23 +131,26 @@ async def _process_single_article(
                     await articles_col.insert_one(article_doc)
                     return "failed"
 
-            # Step 4: AI summarization (with cache)
-            summary = await generate_summary(clean_text, cache=cache)
-            processing_status = "done"
-            if summary.get("from_cache"):
-                processing_status = "cached"
-            elif (
-                summary.get("title_ai", "") == clean_text[:80]
-                or summary.get("reason") == "Đây là tin tức đáng chú ý mà bạn nên biết."
-            ):
-                processing_status = "fallback"
-
-            # Step 5: Topic classification (with Redis cache)
+            # Step 4: Topic classification FIRST (needed for topic-specific prompt)
             topic = await classify_topic(clean_text, title)
             if redis_cache is not None:
                 import hashlib
                 content_hash = hashlib.sha256(clean_text[:4000].encode()).hexdigest()
                 await redis_cache.put_classification(content_hash, topic)
+
+            # Step 4b: Sentiment analysis
+            from services.sentiment import analyze_sentiment
+            sentiment = analyze_sentiment(clean_text[:2000])
+
+            # Step 5: AI summarization (with cache + topic-specific prompt)
+            summary = await generate_summary(clean_text, cache=cache, topic=topic)
+            processing_status = "done"
+            if summary.get("from_cache"):
+                processing_status = "cached"
+            elif summary.get("provider") == "extractive_fallback":
+                processing_status = "fallback"
+            elif summary.get("quality_score", 1.0) < 0.6:
+                processing_status = "low_quality"
 
             # Step 6: Full dedup (URL hash + title similarity + embedding)
             dedup_result = await deduplicate_article(
@@ -174,6 +177,10 @@ async def _process_single_article(
                 "embedding": dedup_result.get("embedding"),
                 "cluster_id": dedup_result.get("cluster_id"),
                 "processing_status": processing_status,
+                "quality_score": summary.get("quality_score"),
+                "sentiment": sentiment,
+                "ai_provider": summary.get("provider"),
+                "prompt_version": summary.get("prompt_version"),
                 "source_lang": source_lang,
                 "was_translated": was_translated,
                 "created_at": datetime.utcnow(),
@@ -272,3 +279,4 @@ async def run_ingestion_pipeline(
         source_name, stats["new"], stats["duplicate"], stats["failed"],
     )
     return stats
+

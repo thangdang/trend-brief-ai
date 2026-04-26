@@ -146,6 +146,8 @@
 - [ ] 3 summary bullets hiển thị đúng
 - [ ] Reason ("Đáng chú ý vì...") hiển thị đúng
 - [ ] Vietnamese text render đúng (diacritical marks)
+- [ ] Related articles section hiển thị bên dưới bài viết (tối đa 5 bài cùng chủ đề)
+- [ ] Tap related article → navigate to article detail đúng
 
 ### Actions
 - [ ] "Đọc bài gốc" → mở in-app browser với URL gốc
@@ -153,20 +155,29 @@
 - [ ] Share button → platform share sheet với format: "{title}\n\nĐọc thêm: {url}\n\nvia TrendBrief AI"
 - [ ] View interaction recorded khi mở article
 
+### Reactions
+- [ ] Reaction bar hiển thị 5 emoji: ❤️ 😂 😮 😢 😡
+- [ ] Tap reaction → gửi reaction, animation feedback
+- [ ] Tap lại reaction đã chọn → remove reaction
+- [ ] Reaction counts hiển thị đúng, cập nhật real-time
+- [ ] Chỉ được chọn 1 reaction per article
+
 ### Analytics
 - [ ] `article_view` event logged
 - [ ] `article_share` event logged khi share
 - [ ] `bookmark_add` event logged khi bookmark
+- [ ] `reaction_add` event logged khi thả reaction
 
 ---
 
-## 8. Search
+## 8. Search (Meilisearch-powered)
 
 ### Android & iOS
 - [ ] Search icon trên Feed → navigate to SearchScreen
 - [ ] Text input auto-focused
 - [ ] Nhập < 2 ký tự → không trigger search
 - [ ] Nhập ≥ 2 ký tự → trigger search, hiển thị results
+- [ ] Typo-tolerant search hoạt động (ví dụ: "cong nghe" → "Công nghệ")
 - [ ] Infinite scroll pagination cho results
 - [ ] Empty state hiển thị khi không có kết quả
 - [ ] Error state hiển thị khi API fail, nút "Thử lại"
@@ -214,6 +225,12 @@
 
 - [ ] Reading stats hiển thị: articles read, bookmarks, days active
 - [ ] Reading history link → navigate to ReadingHistoryScreen
+- [ ] Referral section hiển thị mã giới thiệu cá nhân
+- [ ] Copy referral code → clipboard, toast confirmation
+- [ ] Share referral link → platform share sheet
+- [ ] Referral stats hiển thị: số bạn bè đã mời, rewards earned
+- [ ] Premium status hiển thị (Free / Premium, ngày hết hạn nếu có)
+- [ ] "Nâng cấp Premium" button → navigate to PremiumScreen (nếu chưa premium)
 - [ ] Dark mode toggle hoạt động
 - [ ] Notification toggle hoạt động
 - [ ] App version hiển thị đúng
@@ -229,7 +246,46 @@
 
 ---
 
-## 14. Performance
+## 14. Premium / Subscription
+
+### Plan Selection
+- [ ] Premium screen hiển thị các gói: Monthly (49,000 VND), Yearly (399,000 VND)
+- [ ] Gói yearly hiển thị badge "Tiết kiệm X%"
+- [ ] Feature comparison hiển thị rõ ràng (Free vs Premium)
+
+### Payment — MoMo
+- [ ] Chọn gói + MoMo → redirect to MoMo app/web
+- [ ] Thanh toán thành công → quay lại app, premium status cập nhật
+- [ ] Thanh toán thất bại → hiển thị error message, nút "Thử lại"
+
+### Payment — VNPay
+- [ ] Chọn gói + VNPay → redirect to VNPay gateway
+- [ ] Thanh toán thành công → quay lại app, premium status cập nhật
+- [ ] Thanh toán thất bại → hiển thị error message
+
+### Payment — Stripe
+- [ ] Chọn gói + Stripe → redirect to Stripe Checkout
+- [ ] Thanh toán thành công → quay lại app, premium status cập nhật
+
+### Premium Features
+- [ ] Premium user: không hiển thị quảng cáo trong feed
+- [ ] Premium user: truy cập tính năng độc quyền
+- [ ] Premium badge hiển thị trong Profile
+- [ ] Hết hạn premium → fallback về Free, hiển thị thông báo
+
+---
+
+## 15. Referral System
+
+- [ ] Mã giới thiệu unique hiển thị trong Profile
+- [ ] Deep link `trendbriefai.vn/ref/{code}` → mở app store hoặc app
+- [ ] Bạn bè cài app qua referral link → referral được ghi nhận
+- [ ] Referral stats cập nhật đúng (số lượt giới thiệu thành công)
+- [ ] Rewards hiển thị đúng (nếu có chương trình thưởng)
+
+---
+
+## 16. Performance
 
 ### Android
 - [ ] Cold start < 3s
@@ -245,7 +301,7 @@
 
 ---
 
-## 15. Device Compatibility
+## 17. Device Compatibility
 
 ### Android
 - [ ] Android 8.0 (API 26) — minimum supported

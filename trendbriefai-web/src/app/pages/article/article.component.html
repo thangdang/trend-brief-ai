@@ -1,11 +1,30 @@
+<!-- Reading Progress Bar -->
+<div class="reading-progress" [style.width.%]="readingProgress()"></div>
+
 <a routerLink="/feed" class="back-link">← Quay lại bảng tin</a>
 
+<!-- Skeleton Loading -->
 @if (loading()) {
-  <div class="loading">Đang tải bài viết...</div>
+  <article class="article-detail skeleton-card">
+    <div style="display:flex;gap:10px;margin-bottom:16px">
+      <div class="skeleton skeleton-line w-30" style="height:18px;margin:0"></div>
+      <div class="skeleton skeleton-line w-40" style="height:12px;margin:0"></div>
+    </div>
+    <div class="skeleton skeleton-line w-80 h-xl"></div>
+    <div class="skeleton skeleton-line h-img w-full" style="margin:12px 0"></div>
+    <div class="skeleton skeleton-line w-full"></div>
+    <div class="skeleton skeleton-line w-full"></div>
+    <div class="skeleton skeleton-line w-80"></div>
+    <div class="skeleton skeleton-line w-60"></div>
+    <div style="display:flex;gap:10px;margin-top:20px">
+      <div class="skeleton" style="width:160px;height:40px;border-radius:8px"></div>
+      <div class="skeleton" style="width:100px;height:40px;border-radius:8px"></div>
+    </div>
+  </article>
 }
 
 @if (article(); as a) {
-  <article class="article-detail">
+  <article class="article-detail animate-in">
     <div class="article-meta">
       <span class="badge" [class]="'t-' + a.topic">{{ a.topic }}</span>
       <span class="meta">{{ a.source }} · {{ a.publishedAt | date:'dd/MM/yyyy HH:mm' }}</span>
@@ -17,7 +36,9 @@
     <h1 class="article-title">{{ a.titleAi || a.titleOriginal }}</h1>
 
     @if (a.imageUrl) {
-      <img [src]="a.imageUrl" [alt]="a.titleAi || a.titleOriginal" class="article-image" />
+      <div class="article-image-wrapper">
+        <img [src]="a.imageUrl" [alt]="a.titleAi || a.titleOriginal" class="article-image" />
+      </div>
     }
 
     @if (a.titleAi && a.titleOriginal && a.titleAi !== a.titleOriginal) {
@@ -52,16 +73,36 @@
       <button class="btn-share" (click)="share(a)">Chia sẻ ↗</button>
     </div>
 
-    <!-- Social sharing buttons (Task 32.7) -->
+    <!-- Social sharing buttons -->
     <div class="social-share">
-      <span>Chia sẻ:</span>
+      <span class="share-label">Chia sẻ:</span>
       <a [href]="'https://zalo.me/share?url=' + encodeURI('https://trendbriefai.vn/article/' + a.id)" target="_blank" class="share-btn zalo">Zalo</a>
       <a [href]="'https://www.facebook.com/sharer/sharer.php?u=' + encodeURI('https://trendbriefai.vn/article/' + a.id)" target="_blank" class="share-btn fb">Facebook</a>
       <button class="share-btn copy" (click)="copyLink(a)">Copy link</button>
     </div>
+
+    <!-- Related Articles -->
+    @if (relatedArticles().length > 0) {
+      <div class="related-section">
+        <h3>📰 Bài viết liên quan</h3>
+        <div class="related-grid">
+          @for (r of relatedArticles(); track r._id) {
+            <a [routerLink]="'/article/' + r._id" class="related-card">
+              <h4>{{ r.title_ai || r.titleAi || 'Untitled' }}</h4>
+              <div class="meta">{{ r.source }} · {{ r.topic }}</div>
+            </a>
+          }
+        </div>
+      </div>
+    }
   </article>
 }
 
 @if (!article() && !loading()) {
-  <div class="not-found">Không tìm thấy bài viết.</div>
+  <div class="empty-state">
+    <div class="empty-icon">🔍</div>
+    <h3>Không tìm thấy bài viết</h3>
+    <p>Bài viết có thể đã bị xóa hoặc không tồn tại.</p>
+    <a routerLink="/feed" class="back-cta">← Về bảng tin</a>
+  </div>
 }

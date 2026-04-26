@@ -28,7 +28,7 @@ const redis = new Redis(config.redisUrl);
 const CACHE_TTL = 300; // 5 minutes
 const DECAY_WINDOW_MS = 48 * 3600_000; // 48 hours
 const READING_SPEED_WPM = 200;
-const MAX_CANDIDATES = 200; // Max articles to fetch from DB for ranking
+const MAX_CANDIDATES = 500; // Max articles to fetch from DB for ranking
 
 // ─── Projection: only fields needed by mobile ───
 const FEED_PROJECTION = {
@@ -44,6 +44,7 @@ const FEED_PROJECTION = {
   is_sponsored: 1,
   sponsor_name: 1,
   image_url: 1,
+  sentiment: 1,
   // Explicitly exclude heavy fields:
   // content_clean: 0, embedding: 0, cluster_id: 0, url_hash: 0
 };
@@ -85,21 +86,21 @@ function rankArticles(
   userInterests: Topic[],
   viewedArticleIds: Set<string>,
 ): ScoredArticle[] {
-  const now = Date.now();
-
   return articles
     .map((article) => {
-      let score = 0;
+      // Start with pre-computed feed_score (or compute on-the-fly if missing)
+      let score = article.feed_score ?? 0;
 
-      // Topic boost
+      if (score === 0) {
+        // Fallback: compute recency score for articles without feed_score
+        const ageMs = Date.now() - new Date(article.created_at).getTime();
+        score = Math.max(0, 1.0 - ageMs / DECAY_WINDOW_MS);
+      }
+
+      // Per-user personalization boost (lightweight, at query time)
       if (article.topic && userInterests.includes(article.topic)) {
         score += 2.0;
       }
-
-      // Recency decay (48h window)
-      const ageMs = now - new Date(article.created_at).getTime();
-      const recency = Math.max(0, 1.0 - ageMs / DECAY_WINDOW_MS);
-      score += recency;
 
       // View penalty
       if (viewedArticleIds.has(article._id.toString())) {
@@ -167,12 +168,12 @@ export async function getFeed(
   }
 
   const articles = await Article.find(articleFilter)
-    .select(FEED_PROJECTION)
-    .sort({ created_at: -1 })
+    .select({ ...FEED_PROJECTION, feed_score: 1 })
+    .sort({ feed_score: -1, created_at: -1 })
     .limit(MAX_CANDIDATES)
     .lean();
 
-  // Rank in memory (fast — only 200 items max)
+  // Rank: use pre-computed feed_score + per-user personalization boost
   const ranked = rankArticles(articles, userInterests, viewedArticleIds);
 
   const totalItems = ranked.length;
@@ -208,9 +209,47 @@ export async function getFeed(
   }
 
   // Build feed items (lightweight — no heavy fields)
+  // A/B test: 50% articles get dynamic affiliate links
+  const useDynamicAffiliate = Math.random() < 0.5;
+  let dynamicAffiliateCache: Record<string, any[]> = {};
+
+  if (useDynamicAffiliate) {
+    try {
+      const { searchAffiliateProducts } = require('./affiliateSearch.service');
+      // Extract keywords from first few articles for dynamic matching
+      const keywords = pageArticles
+        .slice(0, 5)
+        .flatMap((a: any) => [a.title_ai, a.title_original].filter(Boolean))
+        .join(' ')
+        .split(/\s+/)
+        .filter((w: string) => w.length > 3)
+        .slice(0, 10);
+
+      if (keywords.length > 0) {
+        const topics = [...new Set(pageArticles.map((a: any) => a.topic).filter(Boolean))];
+        for (const t of topics) {
+          const products = await searchAffiliateProducts(keywords, t, 2);
+          if (products.length > 0) {
+            dynamicAffiliateCache[t] = products.map((p: any) => ({
+              id: `dyn_${p.name?.slice(0, 10)}`,
+              title: p.name,
+              url: p.url,
+              topic: t,
+              commission: p.commission_rate,
+              provider: p.platform,
+              isActive: true,
+              isDynamic: true,
+            }));
+          }
+        }
+      }
+    } catch { /* dynamic affiliate search failed — use static */ }
+  }
+
   const feedItems: FeedItem[] = pageArticles.map((a) => {
     const articleTopic = a.topic ?? ('ai' as Topic);
-    const topicLinks = affiliateLinksByTopic[articleTopic] ?? [];
+    // Use dynamic affiliate links if available, otherwise static
+    const topicLinks = dynamicAffiliateCache[articleTopic] ?? affiliateLinksByTopic[articleTopic] ?? [];
     return {
       id: a._id.toString(),
       titleOriginal: a.title_original,
@@ -228,6 +267,7 @@ export async function getFeed(
       affiliateLinks: topicLinks.slice(0, 2),
       thumbnailUrl: a.image_url || undefined,
       isTrending: false,
+      _affiliateType: useDynamicAffiliate && dynamicAffiliateCache[articleTopic] ? 'dynamic' : 'static',
     };
   });
 

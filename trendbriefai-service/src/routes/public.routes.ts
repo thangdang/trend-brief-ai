@@ -5,7 +5,9 @@
  */
 
 import { Router, Request, Response } from 'express';
+import crypto from 'crypto';
 import { Article } from '../models/Article';
+import { SummaryFeedback } from '../models/SummaryFeedback';
 import { Topic } from '../types/api.types';
 import { getTrendingArticles } from '../services/trending.service';
 import { getActiveTopics } from '../services/topic.service';
@@ -413,6 +415,69 @@ router.get('/topics', async (_req: Request, res: Response) => {
     res.json(topics);
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch topics' });
+  }
+});
+
+// POST /api/public/summarize-url — "Tóm tắt cho tôi" (paste any URL)
+// Rate limited: 10 requests/hour per IP
+const summarizeRateLimit: Map<string, { count: number; resetAt: number }> = new Map();
+
+router.post('/summarize-url', async (req: Request, res: Response) => {
+  try {
+    const { url } = req.body;
+    if (!url || typeof url !== 'string') {
+      res.status(400).json({ error: 'url is required' });
+      return;
+    }
+
+    // Rate limit by IP
+    const ip = req.ip || req.socket.remoteAddress || 'unknown';
+    const now = Date.now();
+    const limit = summarizeRateLimit.get(ip);
+    if (limit && limit.resetAt > now && limit.count >= 10) {
+      res.status(429).json({ error: 'Bạn đã dùng hết lượt tóm tắt. Thử lại sau 1 giờ.' });
+      return;
+    }
+    if (!limit || limit.resetAt <= now) {
+      summarizeRateLimit.set(ip, { count: 1, resetAt: now + 3600000 });
+    } else {
+      limit.count++;
+    }
+
+    // Forward to AI engine
+    const axios = require('axios');
+    const { config } = require('../config');
+    const { data } = await axios.post(
+      `${config.aiServiceUrl}/summarize-url`,
+      { url },
+      { timeout: 60000 },
+    );
+
+    res.json(data);
+  } catch (err: any) {
+    const status = err.response?.status || 500;
+    const message = err.response?.data?.detail || 'Không thể tóm tắt URL này';
+    res.status(status).json({ error: message });
+  }
+});
+
+// POST /api/public/feedback — rate a summary (thumbs up/down, anonymous)
+router.post('/feedback', async (req: Request, res: Response) => {
+  try {
+    const { articleId, rating, reason } = req.body;
+    if (!articleId || !['up', 'down'].includes(rating)) {
+      res.status(400).json({ error: 'articleId and rating (up/down) required' });
+      return;
+    }
+    const ipHash = crypto.createHash('sha256').update(req.ip || 'unknown').digest('hex').slice(0, 16);
+    await SummaryFeedback.findOneAndUpdate(
+      { article_id: articleId, ip_hash: ipHash },
+      { rating, reason, ip_hash: ipHash },
+      { upsert: true, new: true },
+    );
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to save feedback' });
   }
 });
 

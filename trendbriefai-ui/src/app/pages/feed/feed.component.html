@@ -1,105 +1,135 @@
 <div class="feed-page">
-      <h1 class="page-title">Bảng tin</h1>
+  <h1 class="page-title">Bảng tin</h1>
 
-      <!-- Search bar -->
-      <div class="search-bar">
-        <input
-          type="text"
-          [(ngModel)]="searchQuery"
-          placeholder="Tìm kiếm bài viết..."
-          (keyup.enter)="onSearch()"
-        />
-        @if (searchQuery) {
-          <button class="search-clear" (click)="clearSearch()">✕</button>
-        }
-        <button class="search-btn" (click)="onSearch()">🔍</button>
-      </div>
+  <!-- Search bar -->
+  <div class="search-bar">
+    <input
+      type="text"
+      [(ngModel)]="searchQuery"
+      placeholder="Tìm kiếm bài viết..."
+      (keyup.enter)="onSearch()"
+    />
+    @if (searchQuery) {
+      <button class="search-clear" (click)="clearSearch()" aria-label="Xóa tìm kiếm">✕</button>
+    }
+    <button class="search-btn" (click)="onSearch()" aria-label="Tìm kiếm">🔍</button>
+  </div>
 
-      @if (isSearchMode()) {
-        <div class="search-info">
-          Kết quả cho "{{ searchQuery }}"
-          <button class="clear-link" (click)="clearSearch()">Xóa tìm kiếm</button>
-        </div>
+  @if (isSearchMode()) {
+    <div class="search-info">
+      Kết quả cho "{{ searchQuery }}"
+      <button class="clear-link" (click)="clearSearch()">Xóa tìm kiếm</button>
+    </div>
+  }
+
+  <!-- Topic filter tabs -->
+  @if (!isSearchMode()) {
+    <div class="topic-tabs">
+      @for (tab of tabs; track tab.label) {
+        <button
+          class="tab-btn"
+          [class.active]="activeTopic() === tab.value"
+          (click)="selectTopic(tab.value)"
+        >
+          {{ tab.label }}
+        </button>
       }
+    </div>
+  }
 
-      <!-- Topic filter tabs -->
-      @if (!isSearchMode()) {
-        <div class="topic-tabs">
-          @for (tab of tabs; track tab.label) {
-            <button
-              class="tab-btn"
-              [class.active]="activeTopic() === tab.value"
-              (click)="selectTopic(tab.value)"
-            >
-              {{ tab.label }}
-            </button>
-          }
-        </div>
-      }
-
-      <!-- Trending section -->
-      @if (!isSearchMode() && trendingItems().length > 0 && activeTopic() === null && page() === 1) {
-        <div class="trending-section">
-          <h2 class="section-title">🔥 Đang hot</h2>
-          <div class="trending-grid">
-            @for (item of trendingItems(); track item.id) {
-              <div class="trending-card">
-                <span class="badge-topic small" [class]="'topic-' + item.topic">{{ item.topic | uppercase }}</span>
-                <h4>{{ item.titleAi }}</h4>
-                <span class="trending-source">{{ item.source }}</span>
-              </div>
+  <!-- Trending section -->
+  @if (!isSearchMode() && trendingItems().length > 0 && activeTopic() === null && page() === 1) {
+    <div class="trending-section">
+      <h2 class="section-title">🔥 Đang hot</h2>
+      <div class="trending-grid">
+        @for (item of trendingItems(); track item.id; let idx = $index) {
+          <div class="trending-card" [style.animation-delay]="(idx * 60) + 'ms'">
+            @if (idx < 3) {
+              <span class="trending-rank rank-{{ idx + 1 }}">{{ idx + 1 }}</span>
             }
-          </div>
-        </div>
-      }
-
-
-      <!-- Loading -->
-      @if (loading() && items().length === 0) {
-        <div class="loading">Đang tải...</div>
-      }
-
-      <!-- Article cards -->
-      <div class="card-grid">
-        @for (item of items(); track item.id) {
-          <div class="article-card">
-            <div class="card-header">
-              <div class="card-meta">
-                <span class="badge-topic" [class]="'topic-' + item.topic">{{ item.topic | uppercase }}</span>
-                <span class="reading-time">⏱ {{ item.readingTimeSec }}s đọc</span>
-              </div>
-              <div class="card-actions">
-                <button class="action-btn share-btn" (click)="shareArticle(item)" aria-label="Chia sẻ">↗</button>
-                <button class="action-btn bookmark-btn" (click)="toggleBookmark(item)" [attr.aria-label]="item.isBookmarked ? 'Bỏ lưu' : 'Lưu bài'">
-                  @if (item.isBookmarked) { ★ } @else { ☆ }
-                </button>
-              </div>
-            </div>
-            <h3 class="card-title">{{ item.titleAi }}</h3>
-            <ul class="bullets">
-              @for (bullet of item.summaryBullets; track $index) {
-                <li>{{ bullet }}</li>
-              }
-            </ul>
-            <p class="reason">💡 {{ item.reason }}</p>
-            <div class="card-footer">
-              <span class="source">{{ item.source }}</span>
-              <a [href]="item.url" target="_blank" rel="noopener" class="read-link" (click)="trackClick(item)">Đọc full →</a>
-            </div>
+            <span class="badge-topic small" [class]="'topic-' + item.topic">{{ item.topic | uppercase }}</span>
+            <h4>{{ item.titleAi }}</h4>
+            <span class="trending-source">{{ item.source }}</span>
           </div>
         }
       </div>
+    </div>
+  }
 
-      @if (items().length === 0 && !loading()) {
-        <div class="empty">Không có bài viết nào.</div>
-      }
-
-      <!-- Pagination -->
-      @if (hasMore()) {
-        <div class="pagination">
-          <button class="load-more-btn" (click)="loadMore()" [disabled]="loading()">
-            @if (loading()) { Đang tải... } @else { Tải thêm }
-          </button>
+  <!-- Skeleton Loading -->
+  @if (loading() && items().length === 0) {
+    <div class="card-grid">
+      @for (i of [1,2,3]; track i) {
+        <div class="article-card skeleton-card" [style.animation-delay]="(i * 50) + 'ms'">
+          <div style="display:flex;justify-content:space-between;margin-bottom:10px">
+            <div class="skeleton skeleton-line w-30" style="height:18px;margin:0"></div>
+            <div class="skeleton skeleton-line w-40" style="height:12px;margin:0"></div>
+          </div>
+          <div class="skeleton skeleton-line w-80 h-lg"></div>
+          <div class="skeleton skeleton-line w-full"></div>
+          <div class="skeleton skeleton-line w-full"></div>
+          <div class="skeleton skeleton-line w-60"></div>
+          <div class="skeleton" style="height:36px;width:100%;border-radius:6px;margin-top:8px"></div>
         </div>
       }
     </div>
+  }
+
+  <!-- Article cards -->
+  @if (!loading() || items().length > 0) {
+    <div class="card-grid">
+      @for (item of items(); track item.id; let idx = $index) {
+        <div class="article-card animate-card" [style.animation-delay]="(idx * 50) + 'ms'">
+          <div class="card-header">
+            <div class="card-meta">
+              <span class="badge-topic" [class]="'topic-' + item.topic">{{ item.topic | uppercase }}</span>
+              <span class="reading-time">⏱ {{ item.readingTimeSec }}s đọc</span>
+            </div>
+            <div class="card-actions">
+              <button class="action-btn share-btn" (click)="shareArticle(item)" aria-label="Chia sẻ">↗</button>
+              <button class="action-btn bookmark-btn" (click)="toggleBookmark(item)" [attr.aria-label]="item.isBookmarked ? 'Bỏ lưu' : 'Lưu bài'">
+                @if (item.isBookmarked) { ★ } @else { ☆ }
+              </button>
+            </div>
+          </div>
+          <h3 class="card-title">{{ item.titleAi }}</h3>
+          <ul class="bullets">
+            @for (bullet of item.summaryBullets; track $index) {
+              <li>{{ bullet }}</li>
+            }
+          </ul>
+          <p class="reason">💡 {{ item.reason }}</p>
+          <div class="card-footer">
+            <span class="source">{{ item.source }}</span>
+            <a [href]="item.url" target="_blank" rel="noopener" class="read-link" (click)="trackClick(item)">Đọc full →</a>
+          </div>
+        </div>
+      }
+    </div>
+  }
+
+  @if (items().length === 0 && !loading()) {
+    <div class="empty-state">
+      <div class="empty-icon">📰</div>
+      <h3>Không có bài viết nào</h3>
+      <p>Thử chọn chủ đề khác hoặc tìm kiếm với từ khóa khác.</p>
+    </div>
+  }
+
+  <!-- Loading more -->
+  @if (loading() && items().length > 0) {
+    <div class="loading-more">
+      <span class="spinner"></span>
+      <span>Đang tải thêm...</span>
+    </div>
+  }
+
+  <!-- Pagination -->
+  @if (hasMore() && !loading()) {
+    <div class="pagination">
+      <button class="load-more-btn" (click)="loadMore()">
+        Tải thêm
+      </button>
+    </div>
+  }
+</div>

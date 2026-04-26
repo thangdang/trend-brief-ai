@@ -4,6 +4,7 @@ import cron from 'node-cron';
 import axios from 'axios';
 import { config } from '../config';
 import { RssSource } from '../models/RssSource';
+import { aiEngineBreaker } from '../middleware/circuitBreaker';
 
 const connection = new IORedis(config.redisUrl, { maxRetriesPerRequest: null });
 
@@ -27,26 +28,72 @@ const crawlWorker = new Worker(
 
     let processed = 0;
     for (const source of sources) {
-      try {
-        await axios.post(`${config.aiServiceUrl}/crawl`, {
-          source_url: source.url,
-          source_name: source.name,
-          source_type: source.source_type ?? 'rss',
-          scrape_link_selector: source.scrape_link_selector ?? null,
-        });
+      // Skip auto-disabled sources
+      if (source.health?.auto_disabled && source.health.disabled_until && source.health.disabled_until > new Date()) {
+        console.log(`[CrawlWorker] Skipping auto-disabled source: ${source.name} (until ${source.health.disabled_until.toISOString()})`);
+        continue;
+      }
+      // Re-enable if cooldown expired
+      if (source.health?.auto_disabled && source.health.disabled_until && source.health.disabled_until <= new Date()) {
+        source.health.auto_disabled = false;
+        source.health.disabled_until = undefined;
+        source.health.consecutive_failures = 0;
+        await source.save();
+        console.log(`[CrawlWorker] Re-enabled source: ${source.name}`);
+      }
 
+      try {
+        await aiEngineBreaker.exec(
+          () => axios.post(`${config.aiServiceUrl}/crawl`, {
+            source_url: source.url,
+            source_name: source.name,
+            source_type: source.source_type ?? 'rss',
+            scrape_link_selector: source.scrape_link_selector ?? null,
+          }, { timeout: 120000 }),
+          () => {
+            console.log(`[CrawlWorker] Circuit open — skipping ${source.name}`);
+            return { data: { new: 0, duplicate: 0, failed: 0 } };
+          },
+        );
+
+        // Health: record success
         source.last_crawled_at = new Date();
+        if (!source.health) source.health = { success_count_24h: 0, total_count_24h: 0, success_rate: 1, consecutive_failures: 0, auto_disabled: false };
+        source.health.success_count_24h++;
+        source.health.total_count_24h++;
+        source.health.consecutive_failures = 0;
+        source.health.last_successful_at = new Date();
+        source.health.success_rate = source.health.success_count_24h / Math.max(source.health.total_count_24h, 1);
         await source.save();
         processed++;
 
         await job.updateProgress(Math.round((processed / sources.length) * 100));
-        console.log(`[CrawlWorker] Crawled source: ${source.name}`);
+        console.log(`[CrawlWorker] Crawled source: ${source.name} (health: ${(source.health.success_rate * 100).toFixed(0)}%)`);
       } catch (err: any) {
+        // Health: record failure
+        if (!source.health) source.health = { success_count_24h: 0, total_count_24h: 0, success_rate: 1, consecutive_failures: 0, auto_disabled: false };
+        source.health.total_count_24h++;
+        source.health.consecutive_failures++;
+        source.health.last_error = err.message?.slice(0, 200);
+        source.health.success_rate = source.health.success_count_24h / Math.max(source.health.total_count_24h, 1);
+
+        // Auto-disable if success rate < 10%
+        if (source.health.total_count_24h >= 5 && source.health.success_rate < 0.1) {
+          source.health.auto_disabled = true;
+          source.health.disabled_until = new Date(Date.now() + 24 * 60 * 60 * 1000);
+          console.warn(`[CrawlWorker] Auto-disabled source: ${source.name} (success_rate: ${(source.health.success_rate * 100).toFixed(0)}%)`);
+        }
+        // Alert on 5 consecutive failures
+        if (source.health.consecutive_failures >= 5) {
+          console.warn(`[CrawlWorker] ⚠️ Source ${source.name} has ${source.health.consecutive_failures} consecutive failures`);
+        }
+
+        await source.save();
         console.error(`[CrawlWorker] Failed to crawl source ${source.name}:`, err.message);
       }
     }
 
-    console.log(`[CrawlWorker] Job ${job.id} complete — ${processed}/${sources.length} sources crawled`);
+    console.log(`[CrawlWorker] Job ${job.id} complete — ${processed}/${sources.length} sources crawled (circuit: ${aiEngineBreaker.getStatus().state})`);
     return { processed, total: sources.length };
   },
   { connection, concurrency: 1 },

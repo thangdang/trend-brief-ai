@@ -9,7 +9,10 @@ from config import settings
 logger = logging.getLogger(__name__)
 
 # Valid topics
-VALID_TOPICS = ("ai", "finance", "lifestyle", "drama", "career", "insight", "sport")
+VALID_TOPICS = ("ai", "finance", "lifestyle", "drama", "career", "insight", "sport", "technology", "health", "entertainment")
+
+# Classification metrics (in-memory counters)
+_METRICS = {"keyword_hits": 0, "llm_calls": 0, "cache_hits": 0, "total": 0}
 
 # Keyword lists per topic (Vietnamese + English)
 TOPIC_KEYWORDS: Dict[str, List[str]] = {
@@ -82,6 +85,32 @@ TOPIC_KEYWORDS: Dict[str, List[str]] = {
         "mma", "boxing", "esports", "sea games", "asiad",
         "đội tuyển", "fifa", "afc", "vff", "ngoại hạng anh",
     ],
+    "technology": [
+        "smartphone", "iphone", "samsung", "android", "ios", "app",
+        "ứng dụng", "phần mềm", "hardware", "laptop", "tablet",
+        "review", "đánh giá", "unbox", "benchmark", "camera",
+        "pin", "battery", "sạc", "wireless", "bluetooth", "wifi",
+        "windows", "macos", "linux", "update", "cập nhật",
+        "bảo mật", "security", "hack", "virus", "malware",
+        "xe điện", "ev", "tesla", "vinfast", "drone",
+    ],
+    "health": [
+        "sức khỏe", "bệnh", "thuốc", "bác sĩ", "bệnh viện",
+        "covid", "vaccine", "tiêm chủng", "dịch", "virus",
+        "dinh dưỡng", "vitamin", "tập thể dục", "giảm cân",
+        "tâm lý", "stress", "trầm cảm", "giấc ngủ", "mất ngủ",
+        "ung thư", "tiểu đường", "huyết áp", "tim mạch",
+        "y tế", "who", "bộ y tế", "nghiên cứu y khoa",
+        "health", "medical", "wellness", "mental health",
+    ],
+    "entertainment": [
+        "phim", "movie", "netflix", "series", "anime", "manga",
+        "game", "gaming", "esports", "steam", "playstation", "xbox",
+        "nhạc", "music", "mv", "album", "concert", "live show",
+        "youtube", "tiktok", "streamer", "content creator",
+        "meme", "viral video", "challenge", "reaction",
+        "giải trí", "hài", "comedy", "stand-up", "podcast",
+    ],
 }
 
 # Pre-compile a single regex pattern per topic for efficient matching.
@@ -107,12 +136,11 @@ def _count_matches(text: str, pattern: re.Pattern) -> int:
 async def classify_topic(text: str, title: str = "") -> str:
     """Classify article into exactly one topic using keyword matching.
 
-    Combines *title* and *text* for classification. Keywords found in the
-    title are weighted 2× to reflect headline importance.
-
-    Returns one of the VALID_TOPICS. Defaults to ``'lifestyle'`` when no
-    keywords match.
+    Fast path (≤5ms): keyword matching with title 2× weighting.
+    Tracks metrics: keyword_hits vs llm_calls.
     """
+    _METRICS["total"] += 1
+
     title = (title or "").strip().lower()
     text = (text or "").strip().lower()
 
@@ -125,9 +153,23 @@ async def classify_topic(text: str, title: str = "") -> str:
     best_topic = max(scores, key=lambda t: scores[t])
 
     if scores[best_topic] == 0:
+        _METRICS["keyword_hits"] += 1
         return "lifestyle"
 
+    _METRICS["keyword_hits"] += 1
     return best_topic
+
+
+def get_classifier_metrics() -> dict:
+    """Return classification metrics for monitoring."""
+    total = _METRICS["total"] or 1
+    return {
+        "total": _METRICS["total"],
+        "keyword_hits": _METRICS["keyword_hits"],
+        "llm_calls": _METRICS["llm_calls"],
+        "cache_hits": _METRICS["cache_hits"],
+        "keyword_hit_rate": round(_METRICS["keyword_hits"] / total, 3),
+    }
 
 
 # ---------------------------------------------------------------------------

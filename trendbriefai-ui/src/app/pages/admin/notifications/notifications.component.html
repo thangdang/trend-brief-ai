@@ -1,0 +1,36 @@
+<div class="admin-page">
+      <h2>🔔 Quản lý thông báo</h2>
+
+      <div class="send-form">
+        <h3>Gửi thông báo thủ công</h3>
+        <div class="form-row">
+          <input placeholder="Tiêu đề" [(ngModel)]="pushForm.title" />
+          <input placeholder="Nội dung" [(ngModel)]="pushForm.body" />
+          <input placeholder="Topic (optional)" [(ngModel)]="pushForm.topic" />
+          <button (click)="sendPush()" [disabled]="sending()">{{ sending() ? 'Đang gửi...' : 'Gửi push' }}</button>
+        </div>
+        <p *ngIf="sendResult()" class="result">{{ sendResult() }}</p>
+      </div>
+
+      <div class="section">
+        <h3>Lịch sử gửi</h3>
+        <table class="data-table">
+          <thead>
+            <tr><th>Loại</th><th>User</th><th>Article</th><th>Gửi lúc</th><th>Delivered</th><th>Opened</th></tr>
+          </thead>
+          <tbody>
+            @for (log of logs(); track log._id) {
+              <tr>
+                <td>{{ log.type }}</td>
+                <td>{{ log.user_id }}</td>
+                <td>{{ log.article_id?.title_ai || log.article_id }}</td>
+                <td>{{ log.sent_at | date:'short' }}</td>
+                <td>{{ log.delivered_at ? (log.delivered_at | date:'short') : '—' }}</td>
+                <td>{{ log.opened_at ? (log.opened_at | date:'short') : '—' }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+        <button *ngIf="hasMore()" (click)="loadMore()">Tải thêm</button>
+      </div>
+    </div>

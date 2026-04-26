@@ -46,6 +46,14 @@ export class AnalyticsService {
     });
   }
 
+  /** Track reading time when user leaves article page. */
+  trackReadingTime(articleId: string, durationSec: number): void {
+    this.gtag('event', 'reading_time', {
+      article_id: articleId,
+      duration_seconds: durationSec,
+    });
+  }
+
   /** Track when a user shares an article. */
   trackArticleShare(articleId: string, method: string): void {
     this.gtag('event', 'article_share', {

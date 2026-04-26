@@ -1,7 +1,7 @@
 // Service Worker — cache last 20 articles for offline (Task 32.1)
 const CACHE_NAME = 'trendbriefai-v1';
 const ARTICLE_CACHE = 'trendbriefai-articles-v1';
-const MAX_CACHED_ARTICLES = 20;
+const MAX_CACHED_ARTICLES = 50;
 
 // Pre-cache app shell
 const APP_SHELL = ['/', '/index.html', '/manifest.webmanifest'];

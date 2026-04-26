@@ -47,6 +47,16 @@ AI tóm tắt tin tức từ hàng trăm nguồn uy tín, lọc ra những gì q
 
 • Đọc bài gốc — Muốn đọc chi tiết hơn? Nhấn "Đọc bài gốc" để mở bài viết đầy đủ ngay trong app.
 
+• Phản hồi nhanh — Thả reaction (❤️ 😂 😮 😢 😡) cho mỗi bài viết. Xem cộng đồng nghĩ gì về tin tức hôm nay.
+
+• Lịch sử đọc — Xem lại tất cả bài viết bạn đã đọc, sắp xếp theo thời gian. Không bao giờ mất bài viết hay.
+
+• Bài viết liên quan — Sau mỗi bài, AI gợi ý thêm bài viết cùng chủ đề để bạn đọc sâu hơn.
+
+• Giới thiệu bạn bè — Chia sẻ mã giới thiệu, nhận thưởng khi bạn bè cài app. Càng giới thiệu nhiều, càng nhiều ưu đãi.
+
+• TrendBrief Premium — Nâng cấp để đọc không giới hạn, không quảng cáo, và truy cập tính năng độc quyền. Thanh toán qua MoMo, VNPay hoặc Stripe.
+
 **Tại sao Gen Z chọn TrendBrief AI?**
 
 Thời gian là vàng. Thay vì lướt hàng chục trang báo, bạn chỉ cần mở TrendBrief AI và nắm bắt mọi thứ trong vài phút. AI làm việc nặng, bạn chỉ cần đọc.
@@ -61,7 +71,7 @@ Tải TrendBrief AI ngay — đọc tin nhanh, hiểu sâu, không tốn thời 
 TrendBrief AI - Đọc Tin Nhanh
 
 ### Short Description
-AI tóm tắt tin tức 30 giây. 9+ chủ đề, cá nhân hóa, dark mode, đọc offline. Tin nóng hôm nay trong tầm tay.
+AI tóm tắt tin tức 30 giây. 9+ chủ đề, cá nhân hóa, dark mode, đọc offline, reactions, premium. Tin nóng hôm nay trong tầm tay.
 
 ### Full Description
 Bạn bận rộn nhưng vẫn muốn nắm bắt mọi thứ đang xảy ra? TrendBrief AI giúp bạn đọc tin nhanh gọn, thông minh — chỉ 30 giây cho mỗi bài viết.
@@ -109,6 +119,31 @@ Mất mạng? Không sao. App lưu cache bài viết gần nhất để bạn đ
 Lưu bài viết hay để đọc sau. Chia sẻ nhanh qua Zalo, Facebook hoặc copy link cho bạn bè.
 
 ━━━━━━━━━━━━━━━━━━━━
+😍 PHẢN HỒI NHANH
+━━━━━━━━━━━━━━━━━━━━
+Thả reaction (❤️ 😂 😮 😢 😡) cho mỗi bài viết. Xem cộng đồng nghĩ gì về tin tức hôm nay.
+
+━━━━━━━━━━━━━━━━━━━━
+📖 LỊCH SỬ ĐỌC
+━━━━━━━━━━━━━━━━━━━━
+Xem lại tất cả bài viết bạn đã đọc, sắp xếp theo thời gian. Không bao giờ mất bài viết hay.
+
+━━━━━━━━━━━━━━━━━━━━
+🔗 BÀI VIẾT LIÊN QUAN
+━━━━━━━━━━━━━━━━━━━━
+Sau mỗi bài, AI gợi ý thêm bài viết cùng chủ đề để bạn đọc sâu hơn.
+
+━━━━━━━━━━━━━━━━━━━━
+🎁 GIỚI THIỆU BẠN BÈ
+━━━━━━━━━━━━━━━━━━━━
+Chia sẻ mã giới thiệu, nhận thưởng khi bạn bè cài app. Càng giới thiệu nhiều, càng nhiều ưu đãi.
+
+━━━━━━━━━━━━━━━━━━━━
+⭐ TRENDBRIEFAI PREMIUM
+━━━━━━━━━━━━━━━━━━━━
+Nâng cấp để đọc không giới hạn, không quảng cáo, và truy cập tính năng độc quyền. Thanh toán qua MoMo, VNPay hoặc Stripe.
+
+━━━━━━━━━━━━━━━━━━━━
 
 Tại sao Gen Z chọn TrendBrief AI?
 
@@ -137,3 +172,5 @@ Everyone 10+
 | app đọc báo | Ứng dụng đọc tin tức |
 | tin tức mới nhất | Cập nhật tin mới |
 | đọc tin offline | Đọc tin không cần mạng |
+| tin tức premium | Đọc tin không quảng cáo |
+| giới thiệu bạn bè | Referral — mời bạn nhận thưởng |

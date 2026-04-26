@@ -1,34 +1,61 @@
 <h2 class="page-title">Kết quả tìm kiếm: "{{ query() }}"</h2>
 <p class="result-count">{{ total() }} kết quả</p>
 
-<div class="articles">
-  @for (item of items(); track item.id) {
-    <article class="card">
-      <div class="card-top">
-        <span class="badge" [class]="'t-' + item.topic">{{ item.topic }}</span>
-        <span class="meta">{{ item.source }} · {{ item.publishedAt | date:'dd/MM/yyyy' }}</span>
-      </div>
-      <a [routerLink]="'/article/' + item.id" class="card-title">{{ item.titleAi || item.titleOriginal }}</a>
-      <ul class="bullets">
-        @for (b of item.summaryBullets; track $index) {
-          <li>{{ b }}</li>
-        }
-      </ul>
-      <a [routerLink]="'/article/' + item.id" class="read-more">Đọc chi tiết →</a>
-    </article>
-  }
-</div>
+<!-- Skeleton Loading -->
+@if (loading() && items().length === 0) {
+  <div class="articles">
+    @for (i of [1,2,3]; track i) {
+      <article class="card skeleton-card" [style.animation-delay]="(i * 50) + 'ms'">
+        <div class="card-top">
+          <div class="skeleton skeleton-line w-30" style="height:18px;margin:0"></div>
+          <div class="skeleton skeleton-line w-40" style="height:12px;margin:0"></div>
+        </div>
+        <div class="skeleton skeleton-line w-80 h-lg"></div>
+        <div class="skeleton skeleton-line w-full"></div>
+        <div class="skeleton skeleton-line w-full"></div>
+        <div class="skeleton skeleton-line w-60"></div>
+      </article>
+    }
+  </div>
+}
 
-@if (loading()) {
-  <div class="loading">Đang tìm kiếm...</div>
+@if (!loading() || items().length > 0) {
+  <div class="articles">
+    @for (item of items(); track item.id; let idx = $index) {
+      <article class="card animate-card" [style.animation-delay]="(idx * 50) + 'ms'">
+        <div class="card-top">
+          <span class="badge" [class]="'t-' + item.topic">{{ item.topic }}</span>
+          <span class="meta">{{ item.source }} · {{ item.publishedAt | date:'dd/MM/yyyy' }}</span>
+        </div>
+        <a [routerLink]="'/article/' + item.id" class="card-title">{{ item.titleAi || item.titleOriginal }}</a>
+        <ul class="bullets">
+          @for (b of item.summaryBullets; track $index) {
+            <li>{{ b }}</li>
+          }
+        </ul>
+        <a [routerLink]="'/article/' + item.id" class="read-more">Đọc chi tiết →</a>
+      </article>
+    }
+  </div>
+}
+
+@if (loading() && items().length > 0) {
+  <div class="loading-more">
+    <span class="spinner"></span>
+    <span>Đang tìm kiếm...</span>
+  </div>
 }
 
 @if (items().length === 0 && !loading()) {
-  <div class="empty">Không tìm thấy kết quả nào.</div>
+  <div class="empty-state">
+    <div class="empty-icon">🔍</div>
+    <h3>Không tìm thấy kết quả</h3>
+    <p>Thử tìm với từ khóa khác hoặc ngắn hơn nhé.</p>
+  </div>
 }
 
 @if (hasMore() && !loading()) {
   <div class="load-more">
-    <button (click)="loadMore()">Tải thêm</button>
+    <button (click)="loadMore()">Tải thêm kết quả</button>
   </div>
 }

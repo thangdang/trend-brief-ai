@@ -3,9 +3,10 @@ import { Router } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
 
 @Component({
-  selector: 'app-header',
+  selector: 'admin-header',
   standalone: true,
   templateUrl: './header.component.html',
+  styleUrl: './header.component.scss',
 })
 export class HeaderComponent {
   private authService = inject(AuthService);

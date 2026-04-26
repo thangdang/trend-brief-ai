@@ -1,26 +1,39 @@
-"""AI summarization service with extractive fallback and batch processing."""
+"""AI summarization service with multi-model fallback, quality validation, and topic-specific prompts.
+
+Provider chain: Ollama (local) → Groq (free) → Gemini (free)
+Quality validation: auto-retry if quality_score < 0.6
+Prompt templates: topic-specific tone and focus
+"""
 
 import asyncio
+import json
 import logging
 import math
+import pathlib
 import re
 
 import ollama
 
 from config import settings
+from services.llm_providers import provider_chain, _random_fallback_reason
+from services.summary_validator import summary_validator
 
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
-# Prompt template
+# Prompt templates (topic-specific)
 # ---------------------------------------------------------------------------
 
-_SYSTEM_PROMPT = (
-    "Bạn là trợ lý tóm tắt tin tức cho giới trẻ Việt Nam. "
-    "Trả lời bằng tiếng Việt, tone trẻ, dễ hiểu."
-)
+_PROMPT_TEMPLATES: dict[str, str] = {}
+try:
+    _templates_path = pathlib.Path(__file__).parent / "data" / "prompt_templates.json"
+    if _templates_path.exists():
+        _PROMPT_TEMPLATES = json.loads(_templates_path.read_text(encoding="utf-8"))
+        logger.info("Loaded %d prompt templates", len(_PROMPT_TEMPLATES) - 2)  # exclude _version, _description
+except Exception:
+    logger.warning("Failed to load prompt templates — using default")
 
-_USER_PROMPT_TEMPLATE = """\
+_DEFAULT_PROMPT = _PROMPT_TEMPLATES.get("default", """\
 Tóm tắt bài viết sau thành:
 - 1 tiêu đề ngắn (<=12 từ), bắt đầu bằng "TITLE:"
 - 3 bullet chính, mỗi bullet bắt đầu bằng "- "
@@ -30,7 +43,20 @@ Tone: trẻ, dễ hiểu
 
 Bài viết:
 {text}
-"""
+""")
+
+_SYSTEM_PROMPT = (
+    "Bạn là trợ lý tóm tắt tin tức cho giới trẻ Việt Nam. "
+    "Trả lời bằng tiếng Việt, tone trẻ, dễ hiểu."
+)
+
+
+def _get_prompt(text: str, topic: str = "") -> str:
+    """Get topic-specific prompt template, fallback to default."""
+    template = _PROMPT_TEMPLATES.get(topic, _DEFAULT_PROMPT)
+    if template.startswith("_"):  # skip metadata keys
+        template = _DEFAULT_PROMPT
+    return template.format(text=text)
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -56,13 +82,13 @@ def _truncate_title(title: str, max_words: int = 12) -> str:
 def _extractive_fallback(clean_text: str) -> dict:
     """Produce a summary using simple sentence extraction.
 
-    Used when the AI model is unavailable or returns unusable output.
+    Used when all AI providers fail. Uses varied fallback reasons.
     """
     sentences = _split_sentences(clean_text)
 
     title_ai = _truncate_title(sentences[0]) if sentences else clean_text[:80]
     bullets = sentences[:3] if len(sentences) >= 3 else sentences + [""] * (3 - len(sentences))
-    reason = "Đây là tin tức đáng chú ý mà bạn nên biết."
+    reason = _random_fallback_reason()
 
     return {
         "title_ai": title_ai,
@@ -119,72 +145,94 @@ async def generate_summary(
     clean_text: str,
     model_name: str | None = None,
     cache=None,
+    topic: str = "",
 ) -> dict:
     """Generate an AI title, 3 bullets, and a reason from article text.
+
+    Uses multi-model provider chain (Ollama → Groq → Gemini) with
+    quality validation and auto-retry.
 
     Parameters
     ----------
     clean_text:
-        Cleaned article body.  Truncated to ``settings.max_article_chars``
-        before being sent to the model.
+        Cleaned article body.
     model_name:
-        Ollama model to use.  Defaults to ``settings.summarizer_model``.
+        Ollama model override (ignored when using provider chain).
     cache:
-        Optional SummarizerCache instance. When provided, checks cache
-        before calling Ollama and stores results after generation.
+        Optional SummarizerCache instance.
+    topic:
+        Article topic for topic-specific prompt template.
 
     Returns
     -------
-    dict
-        ``{"title_ai": str, "summary_bullets": list[str], "reason": str}``
-        Always contains exactly 3 bullets.  Falls back to extractive
-        summarization when the AI model is unreachable or returns
-        unparseable output. Includes ``from_cache`` flag when cache is used.
+    dict with title_ai, summary_bullets, reason, quality_score, provider.
     """
     # Check cache first
     if cache is not None:
         cached = await cache.get(clean_text)
         if cached is not None:
             logger.info("Summary served from cache")
+            cached["from_cache"] = True
             return cached
 
-    model = model_name or settings.summarizer_model
     truncated = clean_text[: settings.max_article_chars]
+    prompt = _get_prompt(truncated, topic)
 
-    prompt = _USER_PROMPT_TEMPLATE.format(text=truncated)
+    max_retries = 2
+    best_result = None
+    best_score = 0.0
+    used_provider = "fallback"
 
-    try:
-        response = await asyncio.to_thread(
-            ollama.chat,
-            model=model,
-            messages=[
-                {"role": "system", "content": _SYSTEM_PROMPT},
-                {"role": "user", "content": prompt},
-            ],
-            options={"num_predict": 512},
-        )
+    for attempt in range(max_retries + 1):
+        # Use provider chain (Ollama → Groq → Gemini)
+        raw_response, provider_name = await provider_chain.summarize(truncated, prompt)
 
-        raw_content: str = response["message"]["content"]
-        parsed = _parse_ai_response(raw_content)
+        if raw_response is not None:
+            parsed = _parse_ai_response(raw_response)
+            if parsed is not None:
+                # Validate quality
+                validation = summary_validator.validate(parsed, clean_text)
+                parsed["quality_score"] = validation["overall"]
+                parsed["provider"] = provider_name
+                parsed["prompt_version"] = _PROMPT_TEMPLATES.get("_version", "1.0")
 
-        if parsed is not None:
-            logger.info("AI summary generated successfully via model '%s'", model)
-            # Store in cache
-            if cache is not None:
-                await cache.put(clean_text, parsed)
-            return parsed
+                if validation["valid"]:
+                    logger.info(
+                        "AI summary generated (provider=%s, quality=%.3f, attempt=%d)",
+                        provider_name, validation["overall"], attempt + 1,
+                    )
+                    if cache is not None:
+                        await cache.put(clean_text, parsed)
+                    return parsed
 
-        logger.warning(
-            "AI response could not be parsed — falling back to extractive summary. "
-            "Raw response: %.200s",
-            raw_content,
-        )
-    except Exception:
-        logger.exception(
-            "Ollama model '%s' failed — falling back to extractive summary", model
-        )
+                # Track best result so far (even if below threshold)
+                if validation["overall"] > best_score:
+                    best_result = parsed
+                    best_score = validation["overall"]
+                    used_provider = provider_name
 
+                logger.warning(
+                    "Summary quality %.3f below threshold (attempt %d/%d, issues: %s)",
+                    validation["overall"], attempt + 1, max_retries + 1,
+                    validation["issues"],
+                )
+            else:
+                logger.warning("AI response unparseable (attempt %d, provider=%s)", attempt + 1, provider_name)
+        else:
+            logger.warning("All providers failed (attempt %d)", attempt + 1)
+
+    # Use best result if we got one, even if below threshold
+    if best_result is not None:
+        logger.info("Using best available summary (quality=%.3f, provider=%s)", best_score, used_provider)
+        if cache is not None:
+            await cache.put(clean_text, best_result)
+        return best_result
+
+    # Final fallback: extractive
     result = _extractive_fallback(truncated)
+    result["quality_score"] = 0.0
+    result["provider"] = "extractive_fallback"
+    result["prompt_version"] = "fallback"
     if cache is not None:
         await cache.put(clean_text, result)
     return result

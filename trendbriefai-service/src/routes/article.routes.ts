@@ -17,6 +17,9 @@ router.post('/:id/report', authMiddleware, async (req: Request, res: Response) =
       return;
     }
 
+    // Sanitize user input (strip HTML tags)
+    const sanitizedReason = reason.replace(/<[^>]*>/g, '').trim().slice(0, 500);
+
     // Check if already reported by this user
     const existing = await ArticleReport.findOne({ article_id: articleId, user_id: userId });
     if (existing) {
@@ -25,7 +28,7 @@ router.post('/:id/report', authMiddleware, async (req: Request, res: Response) =
     }
 
     // Create report
-    await ArticleReport.create({ article_id: articleId, user_id: userId, reason });
+    await ArticleReport.create({ article_id: articleId, user_id: userId, reason: sanitizedReason });
 
     // Increment report count on article
     const updated = await Article.findByIdAndUpdate(
@@ -61,9 +64,24 @@ router.get('/:id', authMiddleware, async (req: Request, res: Response) => {
       source: article.source,
       publishedAt: article.published_at || article.created_at,
       imageUrl: (article as any).image_url || null,
+      feedScore: (article as any).feed_score || null,
+      qualityScore: (article as any).quality_score || null,
+      aiProvider: (article as any).ai_provider || null,
     });
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch article' });
+  }
+});
+
+// GET /api/articles/:id/related — related articles by embedding similarity
+router.get('/:id/related', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const { getRelatedArticles } = require('../services/related.service');
+    const limit = Math.min(parseInt(req.query.limit as string) || 5, 10);
+    const related = await getRelatedArticles(req.params.id, limit);
+    res.json(related);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch related articles' });
   }
 });
 

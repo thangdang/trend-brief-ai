@@ -210,4 +210,32 @@ router.post('/:id/click', async (req: Request, res: Response) => {
   }
 });
 
+// POST /api/ads/viewable — track viewable ad impression
+router.post('/viewable', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const { ad_id, visible_duration_ms, viewport_percentage, article_position } = req.body;
+    if (!ad_id) { res.status(400).json({ error: 'ad_id required' }); return; }
+
+    const { Ad } = require('../models/Ad');
+    await Ad.findByIdAndUpdate(ad_id, {
+      $inc: { viewable_impressions: 1 },
+      $push: {
+        viewability_data: {
+          $each: [{
+            visible_duration_ms: visible_duration_ms || 0,
+            viewport_percentage: viewport_percentage || 0,
+            article_position: article_position || 0,
+            tracked_at: new Date(),
+          }],
+          $slice: -1000, // keep last 1000 entries
+        },
+      },
+    });
+
+    res.json({ tracked: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Viewability tracking failed' });
+  }
+});
+
 export default router;

@@ -140,7 +140,7 @@ app = FastAPI(
 
 @app.get("/health", response_model=HealthResponse)
 async def health():
-    """Enhanced health endpoint with model readiness info."""
+    """Enhanced health endpoint with model readiness and provider chain info."""
     model_status = getattr(app.state, "model_status", {
         "sentence_transformer": "unknown",
         "ollama": "unknown",
@@ -153,9 +153,16 @@ async def health():
     faiss_size = getattr(app.state, "faiss_index_size", 0)
     lru_size = getattr(app.state, "lru_cache_size", 0)
 
+    # Provider chain health
+    try:
+        from services.llm_providers import provider_chain
+        providers = provider_chain.get_health_status()
+    except Exception:
+        providers = []
+
     return HealthResponse(
         status=status,
-        models=model_status,
+        models={**model_status, "providers": {p["name"]: "healthy" if p["healthy"] else "degraded" for p in providers}},
         cache={"lru_size": str(lru_size), "redis": "unknown"},
         faiss_index_size=faiss_size,
     )

@@ -1,52 +1,22 @@
-<aside class="app-sidebar">
+    <aside class="sidebar">
       <div class="sidebar-brand">
         <span class="brand-icon">⚡</span>
-        TrendBrief
+        <span class="brand-text">TrendBrief Admin</span>
       </div>
-
       <nav class="sidebar-nav">
-        <div class="nav-section">Menu</div>
-        <a class="nav-link" routerLink="/feed" routerLinkActive="active">
-          <span class="nav-icon">📰</span>
-          Feed
-        </a>
-        <a class="nav-link" routerLink="/bookmarks" routerLinkActive="active">
-          <span class="nav-icon">🔖</span>
-          Bookmarks
-        </a>
-        <a class="nav-link" routerLink="/profile" routerLinkActive="active">
-          <span class="nav-icon">👤</span>
-          Profile
-        </a>
-
-        <div class="nav-section">Admin</div>
-        <a class="nav-link" routerLink="/admin/analytics" routerLinkActive="active">
-          <span class="nav-icon">📊</span>
-          Analytics
-        </a>
-        <a class="nav-link" routerLink="/admin/sources" routerLinkActive="active">
-          <span class="nav-icon">📡</span>
-          Sources
-        </a>
-        <a class="nav-link" routerLink="/admin/moderation" routerLinkActive="active">
-          <span class="nav-icon">🛡</span>
-          Moderation
-        </a>
-        <a class="nav-link" routerLink="/admin/ads" routerLinkActive="active">
-          <span class="nav-icon">📢</span>
-          Ads
-        </a>
-        <a class="nav-link" routerLink="/admin/affiliates" routerLinkActive="active">
-          <span class="nav-icon">🔗</span>
-          Affiliates
-        </a>
-        <a class="nav-link" routerLink="/admin/notifications" routerLinkActive="active">
-          <span class="nav-icon">🔔</span>
-          Notifications
-        </a>
-        <a class="nav-link" routerLink="/admin/users" routerLinkActive="active">
-          <span class="nav-icon">👥</span>
-          Users
-        </a>
+        @for (section of menuSections; track section.title) {
+          <div class="nav-section">{{ section.title }}</div>
+          @for (item of section.items; track item.path) {
+            <a [routerLink]="item.path" routerLinkActive="active" class="nav-item">
+              <span class="nav-icon">{{ item.icon }}</span>
+              <span class="nav-label">{{ item.label }}</span>
+            </a>
+          }
+        }
       </nav>
+      <div class="sidebar-footer">
+        <button class="theme-toggle-btn" (click)="toggleTheme()">
+          {{ isDark ? '☀️ Sáng' : '🌙 Tối' }}
+        </button>
+      </div>
     </aside>

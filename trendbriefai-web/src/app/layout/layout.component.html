@@ -9,12 +9,17 @@
         [(ngModel)]="searchQuery"
         placeholder="Tìm kiếm tin tức..."
         (keyup.enter)="doSearch()"
+        aria-label="Tìm kiếm tin tức"
       />
-      <button (click)="doSearch()">🔍</button>
+      <button (click)="doSearch()" aria-label="Tìm kiếm">🔍</button>
     </div>
 
     <div class="nav-right">
+      <a routerLink="/summarize" class="nav-link">🔗 Tóm tắt</a>
       <a routerLink="/feed" routerLinkActive="active" class="nav-link">Bảng tin</a>
+      <button class="theme-toggle" (click)="toggleTheme()" [attr.aria-label]="isDark() ? 'Chuyển sang sáng' : 'Chuyển sang tối'">
+        {{ isDark() ? '☀️' : '🌙' }}
+      </button>
     </div>
   </div>
 </nav>
@@ -37,6 +42,10 @@
     <router-outlet />
   </div>
 </main>
+
+@if (showOnboarding()) {
+  <app-onboarding />
+}
 
 <!-- Footer -->
 <footer class="footer">

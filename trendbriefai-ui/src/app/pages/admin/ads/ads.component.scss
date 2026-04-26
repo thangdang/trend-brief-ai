@@ -1,0 +1,9 @@
+.admin-page { padding: 24px; }
+    .add-form { background: #f9f9f9; padding: 16px; border-radius: 12px; margin-bottom: 24px; }
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .form-grid input, .form-grid select { padding: 8px; border: 1px solid #ddd; border-radius: 6px; }
+    .form-grid button { padding: 8px 16px; background: #6366f1; color: #fff; border: none; border-radius: 6px; cursor: pointer; }
+    .data-table { width: 100%; border-collapse: collapse; }
+    .data-table th, .data-table td { padding: 10px; border-bottom: 1px solid #eee; text-align: left; }
+    .data-table th { background: #f9f9f9; font-weight: 600; }
+    .badge-active { color: #22c55e; } .badge-paused { color: #f59e0b; } .badge-expired { color: #94a3b8; }

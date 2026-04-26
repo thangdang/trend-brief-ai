@@ -1,0 +1,39 @@
+<div class="onboarding-overlay">
+  <div class="onboarding-card">
+    @if (step() === 1) {
+      <h2>👋 Chào mừng đến TrendBrief AI</h2>
+      <p>Chọn ít nhất 3 chủ đề bạn quan tâm để cá nhân hóa bảng tin.</p>
+      <div class="topic-grid">
+        @for (t of topics; track t.id) {
+          <button
+            class="topic-chip"
+            [class.selected]="selectedTopics().includes(t.id)"
+            (click)="toggleTopic(t.id)">
+            {{ t.emoji }} {{ t.label }}
+          </button>
+        }
+      </div>
+      <div class="actions">
+        <button class="btn-skip" (click)="skip()">Bỏ qua</button>
+        <button class="btn-next" [disabled]="selectedTopics().length < 3" (click)="step.set(2)">
+          Tiếp tục ({{ selectedTopics().length }}/3)
+        </button>
+      </div>
+    }
+    @if (step() === 2) {
+      <h2>🔔 Bật thông báo?</h2>
+      <p>Nhận tin tức trending và tóm tắt hàng ngày.</p>
+      <div class="actions">
+        <button class="btn-skip" (click)="step.set(3)">Không, cảm ơn</button>
+        <button class="btn-next" (click)="enableNotifications()">Bật thông báo</button>
+      </div>
+    }
+    @if (step() === 3) {
+      <h2>🚀 Sẵn sàng!</h2>
+      <p>Bảng tin của bạn đã được cá nhân hóa. Bắt đầu đọc ngay!</p>
+      <div class="actions">
+        <button class="btn-next" (click)="finish()">Bắt đầu đọc</button>
+      </div>
+    }
+  </div>
+</div>

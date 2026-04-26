@@ -1,0 +1,8 @@
+<div class="newsletter">
+  <h3>📬 Nhận tin mỗi sáng</h3>
+  <p>Đăng ký nhận tóm tắt tin tức AI mỗi ngày qua email.</p>
+  <form (submit)="subscribe($event)" class="form">
+    <input type="email" [(ngModel)]="email" name="email" placeholder="Email của bạn" required />
+    <button type="submit" [disabled]="submitted()">{{ submitted() ? '✅ Đã đăng ký!' : 'Đăng ký' }}</button>
+  </form>
+</div>

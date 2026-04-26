@@ -9,7 +9,7 @@ import { SeoService } from '../../services/seo.service';
   standalone: true,
   imports: [RouterLink, DatePipe],
   templateUrl: './search.component.html',
-  styleUrls: ['./search.component.css'],
+  styleUrl: './search.component.scss',
 })
 export class SearchComponent implements OnInit {
   private api = inject(ApiService);

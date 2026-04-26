@@ -121,76 +121,158 @@ def clean_html(raw_html: str) -> str:
 
 
 async def extract_article(url: str) -> dict | None:
-    """Download and parse a full article using newspaper3k.
+    """Download and parse a full article.
 
-    Parameters
-    ----------
-    url:
-        HTTP/HTTPS URL of the article to extract.
+    Uses trafilatura as primary extractor (better quality, actively maintained),
+    falls back to newspaper3k if trafilatura fails.
 
-    Returns
-    -------
-    dict | None
-        ``{"title": str, "text": str, "published_at": datetime | None}``
-        on success, or ``None`` when the article cannot be fetched / parsed.
+    Returns ``{"title": str, "text": str, "published_at": datetime | None, "image_url": str | None}``
+    or ``None`` on failure.
     """
     logger.info("Extracting article from %s", url)
 
+    # Primary: trafilatura (better extraction quality)
+    try:
+        import trafilatura
+        downloaded = await asyncio.to_thread(
+            trafilatura.fetch_url, url
+        )
+        if downloaded:
+            result = await asyncio.to_thread(
+                trafilatura.extract,
+                downloaded,
+                include_comments=False,
+                include_tables=False,
+                favor_precision=True,
+                output_format="txt",
+            )
+            if result and len(result.strip()) >= settings.min_article_chars:
+                # Extract metadata
+                metadata = await asyncio.to_thread(
+                    trafilatura.extract,
+                    downloaded,
+                    output_format="json",
+                    include_comments=False,
+                )
+                meta = {}
+                if metadata:
+                    import json
+                    try:
+                        meta = json.loads(metadata)
+                    except (json.JSONDecodeError, TypeError):
+                        pass
+
+                return {
+                    "title": (meta.get("title") or "").strip(),
+                    "text": result.strip(),
+                    "published_at": meta.get("date"),
+                    "image_url": meta.get("image") or None,
+                }
+    except ImportError:
+        logger.debug("trafilatura not installed — using newspaper3k")
+    except Exception:
+        logger.warning("trafilatura failed for %s — falling back to newspaper3k", url)
+
+    # Fallback: newspaper3k
     try:
         article = Article(url, language="vi")
-        # newspaper3k is synchronous — offload to a thread.
         await asyncio.to_thread(article.download)
         await asyncio.to_thread(article.parse)
-    except Exception:
-        logger.exception("newspaper3k failed for %s", url)
-        return None
 
-    return {
-        "title": (article.title or "").strip(),
-        "text": (article.text or "").strip(),
-        "published_at": article.publish_date,
-        "image_url": (article.top_image or "").strip() or None,
-    }
+        return {
+            "title": (article.title or "").strip(),
+            "text": (article.text or "").strip(),
+            "published_at": article.publish_date,
+            "image_url": (article.top_image or "").strip() or None,
+        }
+    except Exception:
+        logger.exception("Both extractors failed for %s", url)
+        return None
 
 
 async def extract_and_clean(url: str) -> dict | None:
     """Extract an article and clean its text.
 
-    Combines :func:`extract_article` (newspaper3k) with :func:`clean_html`
-    (BeautifulSoup fallback).  Returns ``None`` when extraction fails or the
-    cleaned text is shorter than ``settings.min_article_chars``.
-
-    Parameters
-    ----------
-    url:
-        HTTP/HTTPS URL of the article.
-
-    Returns
-    -------
-    dict | None
-        ``{"title": str, "text": str, "published_at": datetime | None}``
-        with *cleaned* text, or ``None`` if the article should be skipped.
+    Combines extract_article (trafilatura/newspaper3k) with clean_html
+    (BeautifulSoup fallback). Validates images and parses dates.
     """
     result = await extract_article(url)
     if result is None:
         return None
 
-    # Apply BeautifulSoup cleaning on the extracted text to strip any
-    # residual HTML or ad fragments that newspaper3k may have left behind.
     cleaned_text = clean_html(result["text"])
 
     if len(cleaned_text) < settings.min_article_chars:
         logger.info(
             "Skipping %s — cleaned text too short (%d < %d chars)",
-            url,
-            len(cleaned_text),
-            settings.min_article_chars,
+            url, len(cleaned_text), settings.min_article_chars,
         )
         return None
+
+    # Validate image URL
+    image_url = result.get("image_url")
+    if image_url:
+        image_url = await _validate_image(image_url)
+
+    # Parse published_at from multiple formats
+    published_at = _parse_date(result.get("published_at"))
 
     return {
         "title": unicodedata.normalize("NFC", result["title"]),
         "text": cleaned_text,
-        "published_at": result["published_at"],
-        "image_url": result.get("image_url"),
+        "published_at": published_at,
+        "image_url": image_url,
     }
+
+
+async def _validate_image(url: str) -> str | None:
+    """Validate image URL: check content-type and basic size heuristic."""
+    if not url or not url.startswith("http"):
+        return None
+    try:
+        import aiohttp
+        async with aiohttp.ClientSession() as session:
+            async with session.head(url, timeout=aiohttp.ClientTimeout(total=5), allow_redirects=True) as resp:
+                if resp.status != 200:
+                    return None
+                ct = resp.headers.get("Content-Type", "")
+                if not ct.startswith("image/"):
+                    return None
+                # Check Content-Length if available (skip tiny images < 5KB)
+                cl = resp.headers.get("Content-Length")
+                if cl and int(cl) < 5000:
+                    return None
+                return url
+    except ImportError:
+        # aiohttp not available — accept URL as-is
+        return url
+    except Exception:
+        return None
+
+
+def _parse_date(value) -> object | None:
+    """Parse date from multiple formats (ISO, Vietnamese, RSS pubDate)."""
+    if value is None:
+        return None
+    if hasattr(value, 'isoformat'):
+        return value  # already a datetime
+
+    if isinstance(value, str):
+        from datetime import datetime
+        formats = [
+            "%Y-%m-%dT%H:%M:%S",
+            "%Y-%m-%dT%H:%M:%SZ",
+            "%Y-%m-%dT%H:%M:%S%z",
+            "%Y-%m-%d %H:%M:%S",
+            "%Y-%m-%d",
+            "%d/%m/%Y %H:%M",
+            "%d/%m/%Y",
+            "%a, %d %b %Y %H:%M:%S %z",  # RSS pubDate
+            "%a, %d %b %Y %H:%M:%S GMT",
+        ]
+        for fmt in formats:
+            try:
+                return datetime.strptime(value.strip(), fmt)
+            except (ValueError, TypeError):
+                continue
+    return None
