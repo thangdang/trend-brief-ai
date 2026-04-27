@@ -300,6 +300,12 @@
 - [x] 10.21 Test circuit breaker: verify open/close transitions, verify fallback behavior
 - [x] 10.22 All test files created (Python engine + Node.js service + Web E2E)
 
+## Phase 11: AI Independence (3 tasks)
+
+- [x] 11.1 Create `scheduler.py` in engine — independent crawl scheduler that reads RSS sources from MongoDB, crawls every 10min, runs full AI pipeline locally, writes results back. Also handles weekly discovery + FAISS rebuild every 6h
+- [x] 11.2 Move related articles cosine similarity to engine — new `POST /related` endpoint using numpy vectorized cosine similarity. Service calls engine via HTTP, falls back to same-topic recency when engine offline
+- [x] 11.3 Add `CRAWL_MODE` config to service — default `engine` (engine runs own scheduler), optional `service` (legacy HTTP trigger). Service only starts crawl scheduler when `CRAWL_MODE=service`
+
 ---
 
 ## Summary
@@ -316,4 +322,5 @@
 | 8 | Growth & Monetization | 24 | ✅ Complete |
 | 9 | UI/UX Polish | 11 | ✅ Complete |
 | 10 | Code Quality & Review | 22 | ✅ Complete |
-| **Total** | | **261** | **✅ All Complete** |
+| 11 | AI Independence | 3 | ✅ Complete |
+| **Total** | | **264** | **✅ All Complete** |

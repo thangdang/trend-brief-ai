@@ -5,26 +5,34 @@
 ## Architecture
 
 ```
-trendbriefai-mobile (Flutter)  →  trendbriefai-service (Express.js)  →  trendbriefai-engine (FastAPI)
-                                          ↓                                      ↓
-                                       MongoDB                          Ollama + Embeddings
-                                          ↑                             feedparser + newspaper3k
-trendbriefai-ui (Angular 19+)  →  trendbriefai-service
-                                          ↑
-                                    Redis + BullMQ
+VPS:
+  trendbriefai-service (Express.js) — API only, serves feed/auth/payments
+  trendbriefai-web (Angular 21)     — Public website (SSR)
+  trendbriefai-ui (Angular 21)      — Admin dashboard
+  MongoDB + Redis + Meilisearch
+
+Local PC:
+  trendbriefai-engine (FastAPI)     — AI endpoints + independent scheduler
+    api.py                          — /related, /summarize-url, /process, /personalize
+    scheduler.py                    — Auto-crawl every 10min (reads MongoDB, runs AI locally)
+  Ollama                            — LLM (summarize, translate, classify)
+  FAISS + sentence-transformers     — Embeddings + dedup
+
+Mobile:
+  trendbriefai-mobile (Flutter)     — iOS/Android
 ```
+
+**Key principle:** Engine runs independently — auto-crawls, auto-processes, writes to MongoDB. Service only reads data and calls engine for on-demand AI (related articles, URL summarize).
 
 ## Project Structure
 
 | Folder | Stack | Description |
 |--------|-------|-------------|
-| `trendbriefai-service/` | Express.js + TypeScript + Mongoose + BullMQ | REST API + auth + feed + scheduler |
-| `trendbriefai-engine/` | Python 3.12 + FastAPI + Ollama | AI crawl + summarize + classify + dedup |
-| `trendbriefai-ui/` | Angular 19+ + ArchitectUI + Bootstrap 5 | Web dashboard |
-| `trendbriefai-mobile/` | Flutter 3.x + Dio + Provider | Mobile app (Android + iOS) |
-| `docs/` | Markdown | Architecture, flows, setup, deploy, cost guides |
-| `spec/` | Markdown | Product specs |
-| `database/` | MongoDB scripts | Seeds, migrations |
+| `trendbriefai-service/` | Express.js + TypeScript + Mongoose + BullMQ | REST API + auth + feed + notifications |
+| `trendbriefai-engine/` | Python 3.12 + FastAPI + Ollama | AI processing + independent crawl scheduler |
+| `trendbriefai-web/` | Angular 21 + Bootstrap 5 | Public website (SSR) |
+| `trendbriefai-ui/` | Angular 21 + Bootstrap 5 | Admin dashboard |
+| `trendbriefai-mobile/` | Flutter 3.x + Riverpod | Mobile app (Android + iOS) |
 
 ## Features
 
@@ -43,7 +51,7 @@ trendbriefai-ui (Angular 19+)  →  trendbriefai-service
 - 📈 Analytics (DAU, MAU, D7 retention, engagement, ad/affiliate metrics)
 - 🏷️ Sponsored articles support
 - 🔄 3-layer deduplication (URL hash → title similarity → embedding cosine)
-- ⏰ Auto-crawl every 10 minutes (node-cron + BullMQ)
+- ⏰ Auto-crawl every 10 minutes (engine scheduler.py — independent, no service dependency)
 - 🌐 Auto-translate non-Vietnamese articles (langdetect + Ollama)
 - 🔍 Auto-discover new VN sources weekly (Google News scan + backlink mining + RSS detect)
 

@@ -97,7 +97,14 @@ app.use('/api/payment', paymentRoutes);
 
 async function start() {
   await connectDatabase();
-  startCrawlScheduler();
+  // Crawl scheduler: only start if CRAWL_MODE=service (legacy mode)
+  // In hybrid deployment, the engine runs its own scheduler (python scheduler.py)
+  if (config.crawlMode === 'service') {
+    startCrawlScheduler();
+    console.log('📡 Crawl mode: service (triggers engine via HTTP)');
+  } else {
+    console.log('📡 Crawl mode: engine (engine runs its own scheduler independently)');
+  }
   startNotificationScheduler();
   startFeedScoreScheduler();
 

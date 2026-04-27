@@ -434,6 +434,119 @@ async def daily_briefing(req: BriefingRequest):
 
 
 # ---------------------------------------------------------------------------
+# Related Articles — embedding cosine similarity via FAISS/numpy
+# ---------------------------------------------------------------------------
+
+class RelatedRequest(BaseModel):
+    article_id: str
+    limit: int = 5
+
+
+class RelatedArticle(BaseModel):
+    id: str
+    title_ai: str
+    summary_bullets: list[str]
+    image_url: str | None = None
+    topic: str
+    source: str
+    created_at: str | None = None
+
+
+class RelatedResponse(BaseModel):
+    articles: list[RelatedArticle]
+
+
+@app.post("/related", response_model=RelatedResponse)
+async def related_articles(req: RelatedRequest):
+    """Find related articles using embedding cosine similarity.
+
+    Loads the source article's embedding, finds candidates with embeddings
+    in the same topic from the last 7 days, scores by cosine similarity.
+    """
+    import numpy as np
+    from bson import ObjectId
+    from datetime import timedelta
+
+    try:
+        db = get_db()
+        articles_col = db["articles"]
+
+        # Load source article embedding
+        if not ObjectId.is_valid(req.article_id):
+            raise HTTPException(status_code=400, detail="Invalid article_id")
+
+        article = await articles_col.find_one(
+            {"_id": ObjectId(req.article_id)},
+            {"embedding": 1, "topic": 1},
+        )
+        if not article or not article.get("embedding"):
+            # Fallback: return recent same-topic articles
+            fallback = await articles_col.find(
+                {"_id": {"$ne": ObjectId(req.article_id)}, "processing_status": "done"},
+            ).sort("created_at", -1).limit(req.limit).to_list(req.limit)
+            return RelatedResponse(articles=[
+                RelatedArticle(
+                    id=str(a["_id"]),
+                    title_ai=a.get("title_ai", ""),
+                    summary_bullets=a.get("summary_bullets", []),
+                    image_url=a.get("image_url"),
+                    topic=a.get("topic", ""),
+                    source=a.get("source", ""),
+                    created_at=a.get("created_at", "").isoformat() if a.get("created_at") else None,
+                ) for a in fallback
+            ])
+
+        source_emb = np.array(article["embedding"], dtype=np.float32)
+        source_topic = article.get("topic", "")
+
+        # Find candidates: same topic, last 7 days, has embedding
+        since = datetime.utcnow() - timedelta(days=7)
+        candidates = await articles_col.find(
+            {
+                "_id": {"$ne": ObjectId(req.article_id)},
+                "topic": source_topic,
+                "processing_status": "done",
+                "embedding": {"$exists": True, "$ne": []},
+                "created_at": {"$gte": since},
+            },
+            {"title_ai": 1, "summary_bullets": 1, "image_url": 1, "topic": 1, "source": 1, "created_at": 1, "embedding": 1},
+        ).limit(50).to_list(50)
+
+        if not candidates:
+            return RelatedResponse(articles=[])
+
+        # Compute cosine similarity using numpy (vectorized, fast)
+        candidate_embs = np.array([c["embedding"] for c in candidates], dtype=np.float32)
+        # Normalize
+        source_norm = source_emb / (np.linalg.norm(source_emb) + 1e-9)
+        cand_norms = candidate_embs / (np.linalg.norm(candidate_embs, axis=1, keepdims=True) + 1e-9)
+        similarities = cand_norms @ source_norm  # dot product of normalized vectors = cosine sim
+
+        # Sort by similarity descending
+        top_indices = np.argsort(similarities)[::-1][:req.limit]
+
+        result = []
+        for idx in top_indices:
+            c = candidates[idx]
+            result.append(RelatedArticle(
+                id=str(c["_id"]),
+                title_ai=c.get("title_ai", ""),
+                summary_bullets=c.get("summary_bullets", []),
+                image_url=c.get("image_url"),
+                topic=c.get("topic", ""),
+                source=c.get("source", ""),
+                created_at=c.get("created_at").isoformat() if c.get("created_at") else None,
+            ))
+
+        return RelatedResponse(articles=result)
+    except HTTPException:
+        raise
+    except Exception:
+        logger.exception("Related articles failed for %s", req.article_id)
+        return RelatedResponse(articles=[])
+
+
+# ---------------------------------------------------------------------------
 # ML-based feed personalization (Task 35.3)
 # ---------------------------------------------------------------------------
 

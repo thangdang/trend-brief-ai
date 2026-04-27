@@ -17,17 +17,21 @@
 ├──────────┴───────────┴───────────────────────────────────┤
 │                  trendbriefai-service                      │
 │                  (Express.js / TypeScript)                 │
-│  /api/feed  /api/search  /api/trending  /api/auth         │
-│  /api/bookmarks  /api/interactions  /api/notifications     │
-│  /api/topics  /api/users  /api/admin  /api/public          │
+│  API only — serves feed, auth, payments, notifications    │
+│  Calls engine via HTTP for AI (related, summarize-url)    │
+│  CRAWL_MODE=engine → no crawl trigger from service        │
 ├──────────────────────────────────────────────────────────┤
 │                  trendbriefai-engine                       │
 │                  (FastAPI / Python)                        │
-│  Crawl → Clean → Quality → Cache → Summarize → Classify  │
-│  → Dedup → Store                                          │
+│  api.py:       AI endpoints (/related, /summarize-url,    │
+│                /process, /dedup, /personalize, /briefing) │
+│  scheduler.py: Independent crawl scheduler (every 10min)  │
+│                Reads RSS sources from MongoDB              │
+│                Crawl → Clean → Summarize → Classify →     │
+│                Embed → Dedup → Store (all local AI)       │
 ├──────────────────────────────────────────────────────────┤
 │  MongoDB    Redis    Ollama (LLaMA 3/Mistral)             │
-│  (data)     (cache)  (local AI inference)                  │
+│  (shared)   (cache)  (local AI inference)                  │
 ├──────────────────────────────────────────────────────────┤
 │  Meilisearch (full-text search, Vietnamese tokenizer)     │
 ├──────────────────────────────────────────────────────────┤
@@ -630,45 +634,21 @@ GET /api/articles/:id/related?limit=5
     └─ MISS
         │
         ▼
-    [Load article embedding from MongoDB]
+    [Call AI engine: POST /related { article_id, limit }]
         │
         ▼
-    [Find articles same topic, last 7 days, with embeddings]
-        │
-        ▼
-    [Compute cosine similarity in-memory]
-        │
-        ▼
-    [Sort by similarity desc, take top 5 (exclude self)]
+    [Engine: load embedding → find candidates → numpy cosine similarity → return top N]
         │
         ▼
     [Cache in Redis (1h TTL)]
         │
         ▼
     [Return related articles]
+    
+    Fallback (engine offline): same-topic recent articles from MongoDB
 ```
 
-```typescript
-async function getRelated(articleId: string, limit = 5) {
-  const article = await Article.findById(articleId).select('embedding topic');
-  if (!article?.embedding?.length) return getFallbackRelated(article.topic, limit);
-
-  const candidates = await Article.find({
-    _id: { $ne: articleId },
-    topic: article.topic,
-    processing_status: 'done',
-    embedding: { $exists: true },
-    created_at: { $gte: new Date(Date.now() - 7*24*60*60*1000) },
-  }).select('title_ai summary_bullets image_url embedding created_at').limit(50);
-
-  const scored = candidates.map(c => ({
-    article: c,
-    similarity: cosineSimilarity(article.embedding, c.embedding),
-  }));
-  scored.sort((a, b) => b.similarity - a.similarity);
-  return scored.slice(0, limit).map(s => s.article);
-}
-```
+Service delegates ALL similarity computation to the AI engine. No cosine similarity in Node.js.
 
 ### 4.11 Rich Share Cards
 

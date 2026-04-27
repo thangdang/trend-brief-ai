@@ -21,6 +21,9 @@ export const config = {
 
   // Crawl
   crawlIntervalMinutes: parseInt(process.env.CRAWL_INTERVAL_MINUTES || '10', 10),
+  // CRAWL_MODE: 'service' = service triggers crawl via HTTP to engine (legacy)
+  //             'engine'  = engine runs its own scheduler independently (recommended for hybrid)
+  crawlMode: (process.env.CRAWL_MODE || 'engine') as 'service' | 'engine',
 
   // Google OAuth
   google: {
